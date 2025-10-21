@@ -27,6 +27,17 @@ export interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
+// Custom Request interface (สำหรับ compatibility)
+export interface CustomRequest extends Request {
+  user?: {
+    id: number;
+    email?: string;
+    role: 'client' | 'admin';
+    iat?: number;
+    exp?: number;
+  };
+}
+
 // Car interface
 export interface Car {
   id?: number;

@@ -51,7 +51,7 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
     return;
   }
 
-  const userRole = role && ['admin', 'client'].includes(role) ? role : 'client';
+  const userRole: 'client' | 'admin' = role && ['admin', 'client'].includes(role) ? role : 'client';
 
   try {
     const [existingUsers] = await db.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
@@ -61,7 +61,7 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [result] = await db.query('INSERT INTO users (name, email, password, role, created_at) VALUES (?, ?, ?, ?, NOW())', [name, email, hashedPassword, userRole]);
+    const [result] = await db.query('INSERT INTO users (name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, 1, NOW())', [name, email, hashedPassword, userRole]);
     const userId = (result as any).insertId;
 
     const [newUser] = await db.query<(RowDataPacket & User)[]>('SELECT id, name, email, role, created_at FROM users WHERE id = ?', [userId]);
@@ -188,5 +188,15 @@ function generateJwtToken(user: User): string {
   }
 
   const signOptions: SignOptions = { expiresIn };
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET as string, signOptions);
+  
+  // ✅ ระบุ role เป็น literal type
+  return jwt.sign(
+    { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role as 'client' | 'admin'  // ✅ แก้ตรงนี้
+    }, 
+    JWT_SECRET as string, 
+    signOptions
+  );
 }
