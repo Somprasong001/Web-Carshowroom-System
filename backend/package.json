@@ -1,0 +1,53 @@
+{
+  "name": "car-showroom-backend",
+  "version": "1.0.0",
+  "description": "Backend for Super Car Showroom application",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/server.js",
+    "dev": "nodemon src/server.ts",
+    "build": "tsc",
+    "start:prod": "npm run build && node dist/server.js"
+  },
+  "keywords": [
+    "car-showroom",
+    "backend",
+    "express",
+    "typescript",
+    "mysql"
+  ],
+  "author": "Somprasong",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.14.0",
+    "nodemailer": "^6.10.1",
+    "validator": "^13.12.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/date-fns": "^2.6.0",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.12",
+    "@types/nodemailer": "^6.4.17",
+    "@types/validator": "^13.12.2",
+    "@types/ws": "^8.18.1",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
