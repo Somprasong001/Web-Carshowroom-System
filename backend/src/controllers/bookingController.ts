@@ -3,9 +3,9 @@ import db from '../config/db';
 import { Booking } from '../types';
 import { JwtPayload } from 'jsonwebtoken';
 
-// กำหนด interface สำหรับ req.user
+// กำหนด interface สำหรับ req.user โดยระบุ role เป็น union type ที่ชัดเจน
 interface CustomRequest extends Request {
-    user?: JwtPayload & { id: number; role: string };
+    user?: JwtPayload & { id: number; role: 'client' | 'admin' };
 }
 
 export const createBooking: RequestHandler = async (req: CustomRequest, res: Response, next: NextFunction) => {
