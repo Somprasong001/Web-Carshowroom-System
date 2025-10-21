@@ -32,25 +32,24 @@ const notifyAdmins = (message: string) => {
   });
 };
 
-// ตั้งค่า Nodemailer (จะใช้เฉพาะถ้าไม่ปิดการส่งอีเมล)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// ตรวจสอบว่าควรเปิดใช้งานอีเมลหรือไม่
+const isEmailEnabled = process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.EMAIL_ADMIN;
 
-// ตรวจสอบ environment variables เฉพาะเมื่อไม่ปิดการส่งอีเมล
-const isEmailDisabled = process.env.DISABLE_EMAIL === 'true';
-if (!isEmailDisabled) {
-  const requiredEnvVars = ['EMAIL_USER', 'EMAIL_PASS', 'EMAIL_ADMIN'];
-  const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
-  if (missingEnvVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
-  }
+// ตั้งค่า Nodemailer (เฉพาะถ้ามี email config)
+let transporter: nodemailer.Transporter | null = null;
+if (isEmailEnabled) {
+  transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+  console.log('✅ Email functionality enabled');
+} else {
+  console.warn('⚠️  Email environment variables not set. Email functionality will be disabled.');
 }
 
 export const sendContact = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -80,29 +79,39 @@ export const sendContact = async (req: AuthenticatedRequest, res: Response, next
       [req.user.id, name, email, message, filePath]
     );
 
-    if (!isEmailDisabled) {
-      const mailOptions: nodemailer.SendMailOptions = {
-        from: `"Contact Form" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_ADMIN!,
-        subject: `New Contact Message from ${name}`,
-        text: `
-          Name: ${name}
-          Email: ${email}
-          Message: ${message}
-          ${filePath ? `Attachment: ${filePath}` : ''}
-        `,
-        attachments: file
-          ? [
-              {
-                filename: file.filename,
-                path: path.join(__dirname, '../../uploads', file.filename),
-              },
-            ]
-          : undefined,
-      };
+    // ส่งอีเมลเฉพาะถ้าเปิดใช้งาน
+    if (isEmailEnabled && transporter) {
+      try {
+        const mailOptions: nodemailer.SendMailOptions = {
+          from: `"Contact Form" <${process.env.EMAIL_USER}>`,
+          to: process.env.EMAIL_ADMIN!,
+          subject: `New Contact Message from ${name}`,
+          text: `
+            Name: ${name}
+            Email: ${email}
+            Message: ${message}
+            ${filePath ? `Attachment: ${filePath}` : ''}
+          `,
+          attachments: file
+            ? [
+                {
+                  filename: file.filename,
+                  path: path.join(__dirname, '../../uploads', file.filename),
+                },
+              ]
+            : undefined,
+        };
 
-      await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Failed to send email:', emailError);
+        // ไม่ throw error เพื่อให้ระบบทำงานต่อได้
+      }
+    } else {
+      console.log('📧 Email disabled - Contact saved to database only');
     }
+
     notifyAdmins(`New contact message from ${name}: ${message}`);
 
     res.status(200).json({ message: 'Contact message sent successfully' });
@@ -156,16 +165,26 @@ export const replyContact = async (req: AuthenticatedRequest, res: Response, nex
       return;
     }
 
-    if (!isEmailDisabled) {
-      const mailOptions: nodemailer.SendMailOptions = {
-        from: `"Admin" <${process.env.EMAIL_USER}>`,
-        to: contact[0].email,
-        subject: `Re: Your Message from ${contact[0].name}`,
-        text: `Dear ${contact[0].name},\n\n${reply}\n\nBest regards,\nAdmin`,
-      };
+    // ส่งอีเมลเฉพาะถ้าเปิดใช้งาน
+    if (isEmailEnabled && transporter) {
+      try {
+        const mailOptions: nodemailer.SendMailOptions = {
+          from: `"Admin" <${process.env.EMAIL_USER}>`,
+          to: contact[0].email,
+          subject: `Re: Your Message from ${contact[0].name}`,
+          text: `Dear ${contact[0].name},\n\n${reply}\n\nBest regards,\nAdmin`,
+        };
 
-      await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
+        console.log('✅ Reply email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Failed to send reply email:', emailError);
+        // ไม่ throw error เพื่อให้ระบบทำงานต่อได้
+      }
+    } else {
+      console.log('📧 Email disabled - Reply saved to database only');
     }
+
     await db.query('UPDATE contacts SET status = ? WHERE id = ?', ['replied', id]);
     notifyAdmins(`Replied to contact message from ${contact[0].name}`);
 
