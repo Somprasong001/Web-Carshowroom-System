@@ -155,6 +155,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+// Dynamic PORT สำหรับ Railway (fallback 5000 ถ้าไม่ตั้ง vars)
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
