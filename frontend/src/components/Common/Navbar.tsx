@@ -11,7 +11,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [activeLink, setActiveLink] = useState<string>(location.pathname);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navLinksRef = useRef<HTMLULElement>(null);
+  const navLinksRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     setActiveLink(location.pathname);
