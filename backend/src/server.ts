@@ -20,15 +20,18 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://web-carshowroom-frontend.vercel.app',
-      'https://web-carshowroom-system-production.up.railway.app',
-      process.env.FRONTEND_URL // Dynamic URL from environment
+      'https://web-carshowroom-frontend.vercel.app',  // เก่า (ถ้ายังใช้)
+      'https://web-carshowroom-system.vercel.app',   // Vercel domain จริงจาก project
+      'https://web-carshowroom-system-production.up.railway.app',  // Backend self (ถ้าต้องการ)
+      process.env.FRONTEND_URL,  // Dynamic URL from environment
+      '*'  // ชั่วคราวสำหรับ test (ลบใน production เพื่อ security)
     ].filter(Boolean); // ลบค่า undefined/null ออก
     
-    console.log(`[CORS] Request from origin: ${origin}`);
+    console.log(`[CORS] Request from origin: ${origin || 'undefined (e.g., Postman/mobile)'}`);
     
     // อนุญาตให้ request ที่ไม่มี origin (เช่น Postman, mobile apps, same-origin)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      console.log(`[CORS] Allowed origin: ${origin || 'undefined'}`);
       callback(null, true);
     } else {
       console.warn(`[CORS] Blocked origin: ${origin}`);
