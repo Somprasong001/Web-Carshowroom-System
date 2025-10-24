@@ -132,7 +132,6 @@ const Dashboard: React.FC = () => {
   return (
     <div className="bg-[#0a0a0a] min-h-screen font-sans text-white">
       <div className="max-w-[1400px] mx-auto px-5 py-20">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1
             className="text-6xl font-bold uppercase mb-4"
@@ -150,7 +149,6 @@ const Dashboard: React.FC = () => {
           <p className="text-lg opacity-80">ภาพรวมของระบบ</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <StatCard
             title="ผู้ใช้ทั้งหมด"
@@ -194,7 +192,6 @@ const Dashboard: React.FC = () => {
           />
         </div>
 
-        {/* Recent Activities */}
         <div className="bg-slate-900/50 rounded-lg border border-slate-800 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -239,7 +236,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
           <button
             onClick={() => navigate('/admin/users')}
@@ -287,3 +283,6 @@ const Dashboard: React.FC = () => {
       </style>
     </div>
   );
+};
+
+export default Dashboard;
