@@ -4,30 +4,34 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import carRoutes from './routes/carRoutes';
 import contactRoutes from './routes/contactRoutes';
-import userRoutes from './routes/userRoutes'; // เพิ่ม import
+import userRoutes from './routes/userRoutes';
 import reportRoutes from './routes/reportRoutes';
 import indexRoutes from './routes/index';
 import multer from 'multer';
 import path from 'path';
-// import WebSocket from 'ws'; // Comment WebSocket ชั่วคราว
 
 dotenv.config();
 
 const app = express();
 
-// ตั้งค่า CORS - ต้องอยู่ก่อน middleware อื่นๆ
+// ตั้งค่า CORS - รองรับทั้ง Development และ Production
 const corsOptions = {
   origin: function (origin: string | undefined, callback: Function) {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://web-carshowroom-frontend.vercel.app'
-    ];
+      'https://web-carshowroom-frontend.vercel.app',
+      'https://web-carshowroom-system-production.up.railway.app',
+      process.env.FRONTEND_URL // Dynamic URL from environment
+    ].filter(Boolean); // ลบค่า undefined/null ออก
     
-    // อนุญาตให้ request ที่ไม่มี origin (เช่น Postman, mobile apps)
+    console.log(`[CORS] Request from origin: ${origin}`);
+    
+    // อนุญาตให้ request ที่ไม่มี origin (เช่น Postman, mobile apps, same-origin)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -94,33 +98,46 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
 });
 
-// Routes - ปรับไม่ overlap (indexRoutes สำหรับ general/public, authRoutes แยก /api/auth)
-app.use('/api', indexRoutes); // /api/cars, /api/reviews, /api/bookings, etc.
-app.use('/api/auth', authRoutes); // /api/auth/dashboard, /api/auth/recent-activity
+// Root endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({ 
+    message: 'Car Showroom API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      auth: '/api/auth',
+      cars: '/api/cars',
+      contacts: '/api/contacts',
+      users: '/api/users',
+      reports: '/api/reports'
+    }
+  });
+});
+
+// Routes
+app.use('/api', indexRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/cars', carRoutes);
 app.use('/api/contacts', upload.single('file'), checkFileError, contactRoutes);
-app.use('/api/users', userRoutes); // เพิ่ม
+app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
-
-// WebSocket - Comment ชั่วคราว (ถ้าต้องการรัน port 8080 แยก)
-/*
-const wss = new WebSocket.Server({ port: 8080 });
-wss.on('connection', (ws) => {
-  console.log('New WebSocket connection');
-  ws.on('close', () => console.log('WebSocket connection closed'));
-  // เพิ่ม handler message ถ้าต้องการ
-});
-*/
 
 // 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({ 
     error: 'Not Found',
     message: `Cannot ${req.method} ${req.path}`,
-    path: req.path
+    path: req.path,
+    suggestion: 'Check API documentation for available endpoints'
   });
 });
 
@@ -141,6 +158,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     res.status(401).json({ 
       error: 'Unauthorized',
       message: 'Invalid token or no token provided' 
+    });
+  } else if (err.message === 'Not allowed by CORS') {
+    res.status(403).json({ 
+      error: 'CORS Error',
+      message: 'Origin not allowed by CORS policy' 
     });
   } else if (err.message) {
     res.status(err.status || 500).json({ 
@@ -163,6 +185,7 @@ app.listen(PORT, () => {
   console.log(`🚀 เซิร์ฟเวอร์ทำงานที่พอร์ต ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || `http://localhost:${PORT}`}`);
   console.log('='.repeat(50));
 });
 
