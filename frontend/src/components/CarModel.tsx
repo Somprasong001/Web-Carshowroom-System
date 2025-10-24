@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -28,10 +28,13 @@ const CarModel: React.FC<CarModelProps> = ({ position = [0, 0, 0], scale = 1 }) 
       child.castShadow = false;
       child.receiveShadow = false;
       // แก้ไข WebGL warning โดยตั้งค่า texture ให้สมบูรณ์
-      if (child.material && child.material.map) {
-        child.material.map.minFilter = THREE.LinearFilter; // ปิดการใช้ mipmap
-        child.material.map.magFilter = THREE.LinearFilter;
-        child.material.map.needsUpdate = true;
+      if (child.material) {
+        const material = child.material as THREE.MeshStandardMaterial;
+        if (material.map) {
+          material.map.minFilter = THREE.LinearFilter; // ปิดการใช้ mipmap
+          material.map.magFilter = THREE.LinearFilter;
+          material.map.needsUpdate = true;
+        }
       }
     }
   });

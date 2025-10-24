@@ -57,6 +57,7 @@ const AuthFormAdmin: React.FC = () => {
     }
 
     try {
+      // แก้ไข: ใช้ 2 arguments สำหรับ login, 4 arguments สำหรับ register
       const data = isLogin
         ? await login(email, password)
         : await register(name, email, password, 'admin');
@@ -197,6 +198,7 @@ const AuthFormAdmin: React.FC = () => {
             <p className="text-gray-300 text-center mt-2 text-sm sm:text-base">
               ยังไม่มีบัญชี?{' '}
               <button
+                type="button"
                 onClick={handleToggle}
                 className="text-[#ff3366] hover:underline"
               >
@@ -255,6 +257,7 @@ const AuthFormAdmin: React.FC = () => {
             <p className="text-gray-300 text-center mt-4 text-sm sm:text-base">
               มีบัญชีแล้ว?{' '}
               <button
+                type="button"
                 onClick={handleToggle}
                 className="text-[#ff3366] hover:underline"
               >
@@ -303,6 +306,7 @@ const AuthFormAdmin: React.FC = () => {
         <p className="text-gray-300 text-center mt-4 text-sm sm:text-base">
           ไม่ใช่ผู้ดูแล?{' '}
           <button
+            type="button"
             onClick={() => navigate('/login')}
             className="text-[#ff3366] hover:underline"
           >

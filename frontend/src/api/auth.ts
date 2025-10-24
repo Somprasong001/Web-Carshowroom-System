@@ -1,3 +1,4 @@
+// API Configuration
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Helper function to get auth token
@@ -5,10 +6,11 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('token');
 };
 
-// Helper function to create headers
+// Helper function to create headers with proper CORS handling
 const getHeaders = (includeAuth: boolean = false): HeadersInit => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   };
 
   if (includeAuth) {
@@ -21,129 +23,245 @@ const getHeaders = (includeAuth: boolean = false): HeadersInit => {
   return headers;
 };
 
-// Helper function to handle API responses
+// Helper function to handle API responses with better error handling
 const handleResponse = async (response: Response) => {
+  // Handle empty responses
+  if (response.status === 204) {
+    return { success: true };
+  }
+
+  const contentType = response.headers.get('content-type');
+  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Network error' }));
+    let error;
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        error = await response.json();
+      } else {
+        const text = await response.text();
+        error = { error: text || 'Network error' };
+      }
+    } catch (e) {
+      error = { error: `HTTP error! status: ${response.status}` };
+    }
     throw new Error(error.error || error.message || `HTTP error! status: ${response.status}`);
   }
-  return response.json();
+
+  // Parse JSON response
+  try {
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    } else {
+      return { success: true };
+    }
+  } catch (e) {
+    console.error('Error parsing response:', e);
+    return { success: true };
+  }
+};
+
+// Wrapper for fetch with timeout and better error handling
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      mode: 'cors',
+      credentials: 'include',
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
 };
 
 // ==================== AUTH APIs ====================
 
 export const register = async (email: string, password: string, role: string = 'client') => {
-  const response = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ email, password, role }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email, password, role }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
+  }
 };
 
 export const login = async (email: string, password: string) => {
-  const response = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ email, password }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ email, password }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
 };
 
 export const getDashboardData = async () => {
-  const response = await fetch(`${API_URL}/auth/dashboard`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/auth/dashboard`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Dashboard data error:', error);
+    throw error;
+  }
 };
 
 export const getRecentActivity = async () => {
-  const response = await fetch(`${API_URL}/auth/recent-activity`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/auth/recent-activity`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Recent activity error:', error);
+    throw error;
+  }
 };
 
 // ==================== CAR APIs ====================
 
 export const getCars = async () => {
-  const response = await fetch(`${API_URL}/cars`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/cars`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get cars error:', error);
+    throw error;
+  }
 };
 
 export const getCarById = async (id: number) => {
-  const response = await fetch(`${API_URL}/cars/${id}`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/cars/${id}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get car by ID error:', error);
+    throw error;
+  }
 };
 
 export const getBrands = async () => {
-  const response = await fetch(`${API_URL}/brands`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/brands`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get brands error:', error);
+    throw error;
+  }
 };
 
 export const getYears = async () => {
-  const response = await fetch(`${API_URL}/years`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/years`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get years error:', error);
+    throw error;
+  }
 };
 
 // ==================== REVIEW APIs ====================
 
 export const getReviews = async () => {
-  const response = await fetch(`${API_URL}/reviews`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reviews`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    throw error;
+  }
 };
 
 export const createReview = async (car_id: number, rating: number, comment: string) => {
-  const response = await fetch(`${API_URL}/reviews`, {
-    method: 'POST',
-    headers: getHeaders(true),
-    body: JSON.stringify({ car_id, rating, comment }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reviews`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify({ car_id, rating, comment }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Create review error:', error);
+    throw error;
+  }
 };
 
 export const updateReview = async (id: number, rating: number, comment: string) => {
-  const response = await fetch(`${API_URL}/reviews/${id}`, {
-    method: 'PUT',
-    headers: getHeaders(true),
-    body: JSON.stringify({ rating, comment }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reviews/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify({ rating, comment }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Update review error:', error);
+    throw error;
+  }
 };
 
 export const deleteReview = async (id: number) => {
-  const response = await fetch(`${API_URL}/reviews/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reviews/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Delete review error:', error);
+    throw error;
+  }
 };
 
 // ==================== BOOKING APIs ====================
 
 export const getMyBookings = async () => {
-  const response = await fetch(`${API_URL}/bookings/my-bookings`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/bookings/my-bookings`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get my bookings error:', error);
+    throw error;
+  }
 };
 
 export const createBooking = async (
@@ -152,91 +270,132 @@ export const createBooking = async (
   type: 'test_drive' | 'inquiry', 
   message?: string
 ) => {
-  const response = await fetch(`${API_URL}/bookings`, {
-    method: 'POST',
-    headers: getHeaders(true),
-    body: JSON.stringify({ carId, bookingDate, type, message }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/bookings`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify({ carId, bookingDate, type, message }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Create booking error:', error);
+    throw error;
+  }
 };
 
 export const deleteBooking = async (id: number) => {
-  const response = await fetch(`${API_URL}/bookings/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/bookings/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Delete booking error:', error);
+    throw error;
+  }
 };
 
 // ==================== CONTACT APIs ====================
 
 export const sendContact = async (name: string, email: string, subject: string, message: string, file?: File) => {
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('email', email);
-  formData.append('subject', subject);
-  formData.append('message', message);
-  if (file) {
-    formData.append('file', file);
-  }
+  try {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('email', email);
+    formData.append('subject', subject);
+    formData.append('message', message);
+    if (file) {
+      formData.append('file', file);
+    }
 
-  const token = getAuthToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+    const token = getAuthToken();
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
-  const response = await fetch(`${API_URL}/contacts`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
-  return handleResponse(response);
+    const response = await fetchWithTimeout(`${API_URL}/contacts`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Send contact error:', error);
+    throw error;
+  }
 };
 
 export const getContacts = async () => {
-  const response = await fetch(`${API_URL}/contacts`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/contacts`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get contacts error:', error);
+    throw error;
+  }
 };
 
 export const replyContact = async (id: number, reply: string) => {
-  const response = await fetch(`${API_URL}/contacts/${id}/reply`, {
-    method: 'POST',
-    headers: getHeaders(true),
-    body: JSON.stringify({ reply }),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/contacts/${id}/reply`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify({ reply }),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Reply contact error:', error);
+    throw error;
+  }
 };
 
 export const deleteContact = async (id: number) => {
-  const response = await fetch(`${API_URL}/contacts/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/contacts/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    throw error;
+  }
 };
 
 // ==================== REPORT APIs ====================
 
 export const getUserActivity = async () => {
-  const response = await fetch(`${API_URL}/reports/user-activity`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reports/user-activity`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get user activity error:', error);
+    throw error;
+  }
 };
 
 export const getRegistrationTrends = async () => {
-  const response = await fetch(`${API_URL}/reports/registration-trends`, {
-    method: 'GET',
-    headers: getHeaders(true),
-  });
-  return handleResponse(response);
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/reports/registration-trends`, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Get registration trends error:', error);
+    throw error;
+  }
 };
 
+// Export all APIs
 export default {
   // Auth
   register,

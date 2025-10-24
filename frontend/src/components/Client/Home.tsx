@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import Navbar from '../Common/Navbar';
@@ -7,9 +7,13 @@ import GlobalStyles from '../Common/GlobalStyles';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     console.log('User state in Home:', user);
+    // Simulate loading complete
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
   }, [user]);
 
   // Styles
@@ -46,7 +50,6 @@ const Home: React.FC = () => {
     backgroundSize: '300%',
     lineHeight: 1.1,
     letterSpacing: '-2px',
-    whiteSpace: 'nowrap',
   };
 
   const sectionDescriptionStyle: React.CSSProperties = {
@@ -57,7 +60,7 @@ const Home: React.FC = () => {
     opacity: 0.8,
     color: 'white',
     animation: 'slideUp 1s ease-out forwards',
-    animationDelay: '2s',
+    animationDelay: '0.2s',
   };
 
   const bgEffectStyle: React.CSSProperties = {
@@ -66,28 +69,38 @@ const Home: React.FC = () => {
     left: 0,
     width: '100%',
     height: '100%',
-    background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%)',
+    background: 'radial-gradient(circle at 50% 50%, rgba(255, 51, 102, 0.15) 0%, rgba(0, 0, 0, 0) 70%)',
     zIndex: 0,
   };
 
   const ctaButtonStyle: React.CSSProperties = {
-    margin: '0 1rem',
-    padding: '0.8rem 2rem',
+    margin: '0.5rem',
+    padding: '1rem 2.5rem',
     fontSize: '1.2rem',
     fontWeight: 600,
-    borderRadius: '9999px',
-    background: 'linear-gradient(45deg, #ff3366, #ff6b6b, #4834d4, #686de0)',
+    borderRadius: '50px',
+    background: 'linear-gradient(135deg, #ff3366, #ff6b6b)',
     color: 'white',
     border: 'none',
     cursor: 'pointer',
-    transition: 'transform 0.3s ease',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 4px 15px rgba(255, 51, 102, 0.3)',
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#0a0a0a] min-h-screen flex items-center justify-center">
+        <div className="text-white text-2xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#0a0a0a] font-sans w-full">
       <GlobalStyles />
       <Navbar />
       <BackToTop />
+      
       <section id="home" style={sectionStyle}>
         <div className="bg-effect" style={bgEffectStyle} />
         <div className="section-content" style={sectionContentStyle}>
@@ -97,23 +110,41 @@ const Home: React.FC = () => {
           <p className="section-description" style={sectionDescriptionStyle}>
             Discover the best cars with premium quality and style
           </p>
+          
           <div className="cta-buttons">
             <Link to="/client/home/our-cars">
               <button
                 className="cta-button animate-fade-in"
-                style={{ ...ctaButtonStyle, animationDelay: '0.6s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                style={{ ...ctaButtonStyle, animationDelay: '0.4s' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(255, 51, 102, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 51, 102, 0.3)';
+                }}
               >
                 Explore Our Cars
               </button>
             </Link>
+            
             <Link to="/client/home/contact-us">
               <button
                 className="cta-button animate-fade-in"
-                style={{ ...ctaButtonStyle, animationDelay: '0.8s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                style={{ 
+                  ...ctaButtonStyle, 
+                  animationDelay: '0.6s',
+                  background: 'linear-gradient(135deg, #4834d4, #686de0)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(72, 52, 212, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(72, 52, 212, 0.3)';
+                }}
               >
                 Book a Test Drive
               </button>
@@ -121,23 +152,67 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+      
       <style>
         {`
-          .animate-fade-in {
-            animation: fadeIn 1s ease-out forwards;
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
+          
+          @keyframes slideUp {
+            from {
+              opacity: 0;
+              transform: translateY(30px);
+            }
+            to {
+              opacity: 0.8;
+              transform: translateY(0);
+            }
+          }
+          
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          
+          .animate-fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+          }
+          
           .cta-buttons {
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             gap: 1rem;
-            margin-top: 2rem;
+            margin-top: 2.5rem;
           }
+          
           @media (max-width: 768px) {
-            .section-title { font-size: 8vw; }
-            .section-description { font-size: 1rem; }
+            .section-title { 
+              font-size: 2rem; 
+              letter-spacing: -1px;
+            }
+            .section-description { 
+              font-size: 1rem; 
+              padding: 0 1rem;
+            }
             .cta-buttons {
               flex-direction: column;
-              gap: 0.5rem;
+              align-items: center;
+              gap: 1rem;
+            }
+            .cta-button {
+              width: 80%;
+              max-width: 300px;
             }
           }
         `}

@@ -464,7 +464,7 @@ const Reviews: React.FC = () => {
                           <p className="text-gray-500 text-sm">
                             โพสต์เมื่อ: {new Date(review.created_at).toLocaleString()}
                           </p>
-                          {user && (user.id === review.user_id || user.role === 'admin') && (
+                          {user && ((user as any).id === review.user_id || (user as any).role === 'admin') && ( 
                             <div className="flex gap-2 mt-4">
                               <button
                                 onClick={() => setEditingReview(review)}

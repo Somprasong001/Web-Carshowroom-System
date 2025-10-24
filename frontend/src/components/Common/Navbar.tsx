@@ -239,39 +239,41 @@ const Navbar: React.FC = () => {
                 </li>
               ))}
               {!isMenuOpen && (
-                <li className="relative hidden md:block" ref={dropdownRef}>
-                  <button
-                    style={navLinkStyle(isDropdownOpen)}
-                    className="text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105"
-                    onClick={() => {
-                      console.log('More button clicked');
-                      toggleDropdown();
-                    }}
-                  >
-                    More
-                  </button>
-                  <ul
-                    className={`dropdown-menu absolute flex-col bg-[rgba(10,10,10,0.95)] shadow-lg rounded-lg mt-2 p-2 w-48 right-0 z-[1003] transition-opacity duration-200 ${
-                      isDropdownOpen ? 'flex opacity-100 visible' : 'hidden opacity-0 invisible'
-                    }`}
-                  >
-                    {dropdownLinks.map((link, index) => (
-                      <li
-                        key={index}
-                        onClick={(e) => {
-                          console.log('Dropdown item clicked:', link.label);
-                          handleLinkClick(link.path, e);
-                        }}
-                      >
-                        <span
-                          className="pointer-events-none block text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105 px-4 py-2"
-                          style={navLinkStyle(activeLink === link.path)}
+                <li className="relative hidden md:block">
+                  <div ref={dropdownRef}>
+                    <button
+                      style={navLinkStyle(isDropdownOpen)}
+                      className="text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105"
+                      onClick={() => {
+                        console.log('More button clicked');
+                        toggleDropdown();
+                      }}
+                    >
+                      More
+                    </button>
+                    <ul
+                      className={`dropdown-menu absolute flex-col bg-[rgba(10,10,10,0.95)] shadow-lg rounded-lg mt-2 p-2 w-48 right-0 z-[1003] transition-opacity duration-200 ${
+                        isDropdownOpen ? 'flex opacity-100 visible' : 'hidden opacity-0 invisible'
+                      }`}
+                    >
+                      {dropdownLinks.map((link, index) => (
+                        <li
+                          key={index}
+                          onClick={(e) => {
+                            console.log('Dropdown item clicked:', link.label);
+                            handleLinkClick(link.path, e);
+                          }}
                         >
-                          {link.label}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                          <span
+                            className="pointer-events-none block text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105 px-4 py-2"
+                            style={navLinkStyle(activeLink === link.path)}
+                          >
+                            {link.label}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </li>
               )}
             </ul>
