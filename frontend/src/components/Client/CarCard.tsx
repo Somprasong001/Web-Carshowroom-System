@@ -71,4 +71,4 @@ const CarCard: React.FC<CarCardProps> = ({ car, onClick, onBook }) => {
   );
 };
 
-export default CarCard;
+export default CarCard; 
