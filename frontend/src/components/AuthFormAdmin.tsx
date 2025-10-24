@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, register } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const AuthFormAdmin: React.FC = () => {
   const [isLogin, setIsLogin] = useState<boolean>(true);
@@ -57,11 +58,25 @@ const AuthFormAdmin: React.FC = () => {
     }
 
     try {
-      // แก้ไข: ใช้ 2 arguments สำหรับ login, 4 arguments สำหรับ register
-      const data = isLogin
-        ? await login(email, password)
-        : await register(name, email, password, 'admin');
+      const endpoint = isLogin ? `${API_URL}/auth/login` : `${API_URL}/auth/register`;
+      const body = isLogin 
+        ? { email, password }
+        : { email, password, role: 'admin' };
 
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Request failed');
+      }
+
+      const data = await response.json();
       console.log('API response:', data);
 
       if (data.user.role !== 'admin') {
@@ -72,11 +87,11 @@ const AuthFormAdmin: React.FC = () => {
         isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'
       }สำเร็จ! กำลังเปลี่ยนเส้นทาง...`;
       setSuccess(successMessage);
-      authLogin(data.token, 'admin', { name: data.user.name, email: data.user.email });
+      authLogin(data.token, 'admin', { name: data.user.name || data.user.email, email: data.user.email });
       console.log('Auth login called:', {
         token: data.token,
         role: 'admin',
-        user: { name: data.user.name, email: data.user.email },
+        user: { name: data.user.name || data.user.email, email: data.user.email },
       });
       resetForm();
     } catch (err: any) {
@@ -152,7 +167,6 @@ const AuthFormAdmin: React.FC = () => {
           </p>
         )}
 
-        {/* Login Form */}
         {isLogin && !showForgotPassword && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -208,21 +222,8 @@ const AuthFormAdmin: React.FC = () => {
           </form>
         )}
 
-        {/* Register Form */}
         {!isLogin && !showForgotPassword && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-300 mb-1 text-sm sm:text-base">ชื่อ</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full p-3 rounded-lg bg-[#1f2029] text-white border-none focus:outline-none focus:ring-2 focus:ring-[#ff3366] text-sm sm:text-base"
-                placeholder="กรอกชื่อของคุณ"
-                required
-                disabled={isLoading}
-              />
-            </div>
             <div>
               <label className="block text-gray-300 mb-1 text-sm sm:text-base">อีเมล</label>
               <input
@@ -267,7 +268,6 @@ const AuthFormAdmin: React.FC = () => {
           </form>
         )}
 
-        {/* Forgot Password Form */}
         {showForgotPassword && (
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div>
@@ -302,7 +302,6 @@ const AuthFormAdmin: React.FC = () => {
           </form>
         )}
 
-        {/* ปุ่มไปหน้า Client Login */}
         <p className="text-gray-300 text-center mt-4 text-sm sm:text-base">
           ไม่ใช่ผู้ดูแล?{' '}
           <button

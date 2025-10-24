@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Common/Navbar';
 import BackToTop from '../Common/BackToTop';
 import GlobalStyles from '../Common/GlobalStyles';
 import { Car } from '../../types';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const CarList: React.FC = () => {
   const [cars, setCars] = useState<Car[]>([]);
@@ -12,39 +13,27 @@ const CarList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch cars from API
   useEffect(() => {
     const fetchCars = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get('http://localhost:5000/api/cars');
-        const carsData = response.data;
+        const response = await fetch(`${API_URL}/cars`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch cars');
+        }
+        
+        const carsData = await response.json();
 
-        console.log('Cars data:', carsData);
-
-        // กรองข้อมูลที่ไม่สมบูรณ์
         const validCars = carsData.filter((car: any) => {
-          const isValid =
-            car &&
-            car.brand_name &&
-            typeof car.brand_name === 'string' &&
-            car.model_name &&
-            typeof car.model_name === 'string' &&
-            car.year != null &&
-            (typeof car.year === 'number' || typeof car.year === 'string');
-          if (!isValid) {
-            console.warn('Invalid car data:', car);
-          }
-          return isValid;
+          return car && car.brand_name && car.model_name && car.year != null;
         });
-
-        console.log('Valid cars after filtering:', validCars);
 
         setCars(validCars);
       } catch (error: any) {
         console.error('Error fetching cars:', error);
-        setError('Failed to load cars. Please try again later or check if the backend server is running.');
+        setError('Failed to load cars. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -52,12 +41,10 @@ const CarList: React.FC = () => {
     fetchCars();
   }, []);
 
-  // Navigate to car details page
   const handleViewDetails = (carId: number) => {
     navigate(`/client/home/car-details/${carId}`);
   };
 
-  // Styles
   const sectionStyle: React.CSSProperties = {
     minHeight: '100vh',
     padding: '120px 5% 80px',
@@ -101,33 +88,6 @@ const CarList: React.FC = () => {
     zIndex: 0,
   };
 
-  const carGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '1.5rem',
-    marginTop: '2rem',
-  };
-
-  const carCardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    cursor: 'pointer',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '9999px',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    background: 'linear-gradient(to right, #ff3366, #4834d4)',
-    color: 'white',
-    transition: 'transform 0.3s ease',
-    width: '100%',
-    textAlign: 'center',
-  };
-
   return (
     <div className="bg-[#0a0a0a] min-h-screen font-sans w-full text-white">
       <GlobalStyles />
@@ -156,20 +116,11 @@ const CarList: React.FC = () => {
           ) : cars.length === 0 ? (
             <p className="text-center text-gray-400">ไม่พบข้อมูลรถในระบบ</p>
           ) : (
-            <div className="car-grid" style={carGridStyle}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
               {cars.map((car) => (
                 <div
                   key={car.id}
-                  className="car-card"
-                  style={carCardStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                  className="bg-[rgba(255,255,255,0.05)] rounded-xl overflow-hidden hover:scale-105 transition-transform cursor-pointer"
                 >
                   <img
                     src={car.image_url}
@@ -189,14 +140,7 @@ const CarList: React.FC = () => {
                     </p>
                     <button
                       onClick={() => handleViewDetails(car.id)}
-                      style={buttonStyle}
-                      className="mt-4"
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
+                      className="w-full mt-4 py-3 bg-gradient-to-r from-[#ff3366] to-[#4834d4] text-white rounded-full hover:scale-105 transition-transform"
                     >
                       View Details
                     </button>

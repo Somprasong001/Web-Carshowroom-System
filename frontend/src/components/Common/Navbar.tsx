@@ -11,7 +11,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [activeLink, setActiveLink] = useState<string>(location.pathname);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navLinksRef = useRef<HTMLUListElement>(null);
+  const navLinksRef = useRef<HTMLULElement>(null);
 
   useEffect(() => {
     setActiveLink(location.pathname);
@@ -23,29 +23,16 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    console.log('isMenuOpen:', isMenuOpen, 'Nav-links class:', isMenuOpen ? '!translate-x-[10%] opacity-100' : 'md:!translate-x-0 md:opacity-100 !translate-x-full opacity-0');
-    console.log('Nav-links element:', navLinksRef.current);
-    console.log('Nav-links computed style:', window.getComputedStyle(navLinksRef.current || new Element()).transform);
-  }, [isMenuOpen]);
-
-  useEffect(() => {
-    console.log('Navbar rerendered, isMenuOpen:', isMenuOpen);
-  });
-
   const toggleMenu = () => {
-    console.log('Toggling menu, current state:', isMenuOpen);
     setIsMenuOpen((prev) => {
       const newState = !prev;
       document.body.style.overflow = newState ? 'hidden' : 'auto';
-      console.log('New menu state:', newState, 'Translate:', newState ? '!translate-x-[10%]' : '!translate-x-full');
       return newState;
     });
     if (!isMenuOpen) setIsDropdownOpen(false);
   };
 
   const toggleDropdown = () => {
-    console.log('Toggling dropdown, current state:', isDropdownOpen);
     setIsDropdownOpen((prev) => !prev);
     if (isMenuOpen) toggleMenu();
   };
@@ -58,24 +45,19 @@ const Navbar: React.FC = () => {
   };
 
   const handleLinkClick = (href: string, e: React.MouseEvent<HTMLElement>) => {
-    console.log('Link clicked:', href, 'Current path:', location.pathname);
     e.preventDefault();
     e.stopPropagation();
     setActiveLink(href);
     if (href !== location.pathname) {
-      console.log('Navigating to:', href);
       setTimeout(() => navigate(href), 0);
       if (isMenuOpen) toggleMenu();
       if (isDropdownOpen) setIsDropdownOpen(false);
-    } else {
-      console.log('Same page, no navigation');
     }
   };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        console.log('Clicked outside dropdown, closing');
         setIsDropdownOpen(false);
       }
     };
@@ -131,15 +113,6 @@ const Navbar: React.FC = () => {
     alignItems: 'center',
   });
 
-  const navLinkBeforeAfterStyle = {
-    content: "''",
-    position: 'absolute',
-    height: '2px',
-    background: 'linear-gradient(45deg, #ff3366, #ff6b6b, #4834d4, #686de0)',
-    backgroundSize: '300%',
-    transition: 'width 0.3s ease',
-  };
-
   const allLinks = [
     { path: '/client/home', label: 'Home' },
     { path: '/client/home/our-cars', label: 'Our Cars' },
@@ -190,12 +163,10 @@ const Navbar: React.FC = () => {
               ref={navLinksRef}
               onClick={(e) => e.stopPropagation()}
             >
-              {console.log('Rendering nav-links, isMenuOpen:', isMenuOpen)}
               {(isMenuOpen ? allLinks : mainLinks).map((link, index) => (
                 <li
                   key={index}
                   onClick={(e) => {
-                    console.log('Menu item clicked:', link.label);
                     handleLinkClick(link.path, e);
                   }}
                   className="relative"
@@ -206,36 +177,6 @@ const Navbar: React.FC = () => {
                   >
                     {link.label}
                   </span>
-                  <style>
-                    {`
-                      .nav-links li:nth-child(${index + 1}) {
-                        opacity: 1;
-                        transform: translateX(0);
-                        transition: all 0.3s ease ${index * 0.1}s;
-                      }
-                      .nav-links.translate-x-0 li:nth-child(${index + 1}) {
-                        opacity: 1;
-                        transform: translateX(0);
-                      }
-                      .nav-links li:nth-child(${index + 1})::before {
-                        ${navLinkBeforeAfterStyle}
-                        top: -4px;
-                        left: 0;
-                        width: 0;
-                      }
-                      .nav-links li:nth-child(${index + 1})::after {
-                        ${navLinkBeforeAfterStyle}
-                        bottom: -4px;
-                        right: 0;
-                        width: 0;
-                      }
-                      .nav-links li:nth-child(${index + 1}):hover::before,
-                      .nav-links li:nth-child(${index + 1})::after {
-                        width: 100%;
-                        animation: gradient 8s linear infinite;
-                      }
-                    `}
-                  </style>
                 </li>
               ))}
               {!isMenuOpen && (
@@ -244,10 +185,7 @@ const Navbar: React.FC = () => {
                     <button
                       style={navLinkStyle(isDropdownOpen)}
                       className="text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105"
-                      onClick={() => {
-                        console.log('More button clicked');
-                        toggleDropdown();
-                      }}
+                      onClick={() => toggleDropdown()}
                     >
                       More
                     </button>
@@ -259,10 +197,7 @@ const Navbar: React.FC = () => {
                       {dropdownLinks.map((link, index) => (
                         <li
                           key={index}
-                          onClick={(e) => {
-                            console.log('Dropdown item clicked:', link.label);
-                            handleLinkClick(link.path, e);
-                          }}
+                          onClick={(e) => handleLinkClick(link.path, e)}
                         >
                           <span
                             className="pointer-events-none block text-white hover:text-gray-300 transition-transform duration-300 hover:scale-105 px-4 py-2"
@@ -280,10 +215,7 @@ const Navbar: React.FC = () => {
           </div>
           <button
             className="mobile-nav-toggle md:hidden bg-transparent border-none cursor-pointer w-10 h-10 relative z-[1020] rounded-full transition-colors hover:bg-[rgba(255,255,255,0.1)] mr-5"
-            onClick={() => {
-              console.log('Hamburger button clicked');
-              toggleMenu();
-            }}
+            onClick={() => toggleMenu()}
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           >
             <span
@@ -306,7 +238,6 @@ const Navbar: React.FC = () => {
           }`}
           onClick={(e) => {
             e.stopPropagation();
-            console.log('Overlay clicked');
             toggleMenu();
           }}
         />

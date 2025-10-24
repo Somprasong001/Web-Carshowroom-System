@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Car } from '../../types';
@@ -12,6 +11,8 @@ interface Filters {
   year: string;
   priceMax: string;
 }
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const CarFilter: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
@@ -28,50 +29,36 @@ const CarFilter: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Fetch cars, brands, and years from API
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
         const [carsResponse, brandsResponse, yearsResponse] = await Promise.all([
-          axios.get('http://localhost:5000/api/cars'),
-          axios.get('http://localhost:5000/api/brands'),
-          axios.get('http://localhost:5000/api/years')
+          fetch(`${API_URL}/cars`),
+          fetch(`${API_URL}/brands`),
+          fetch(`${API_URL}/years`)
         ]);
 
-        const carsData = carsResponse.data;
-        const brandsData = brandsResponse.data;
-        const yearsData = yearsResponse.data;
+        if (!carsResponse.ok || !brandsResponse.ok || !yearsResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
 
-        console.log('Cars data:', carsData);
-        console.log('Brands data:', brandsData);
-        console.log('Years data:', yearsData);
+        const carsData = await carsResponse.json();
+        const brandsData = await brandsResponse.json();
+        const yearsData = await yearsResponse.json();
 
-        // กรองข้อมูลที่ไม่สมบูรณ์
         const validCars = carsData.filter((car: any) => {
-          const isValid =
-            car &&
-            car.brand_name &&
-            typeof car.brand_name === 'string' &&
-            car.year != null &&
-            (typeof car.year === 'number' || typeof car.year === 'string');
-          if (!isValid) {
-            console.warn('Invalid car data:', car);
-          }
-          return isValid;
+          return car && car.brand_name && car.year != null;
         });
 
-        console.log('Valid cars after filtering:', validCars);
-
-        // อัพเดต state
         setBrands(brandsData);
         setYears(yearsData.sort((a: string, b: string) => parseInt(b) - parseInt(a)));
         setCars(validCars);
         setFilteredCars(validCars);
       } catch (error: any) {
         console.error('Error fetching data:', error);
-        setError('Failed to load data. Please try again later or check if the backend server is running.');
+        setError('Failed to load data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -79,46 +66,28 @@ const CarFilter: React.FC = () => {
     fetchData();
   }, []);
 
-  // Handle filter changes and apply filtering
   useEffect(() => {
     const applyFilters = () => {
       let filtered = [...cars];
 
-      console.log('Applying filters:', filters);
-
-      // Filter by brand
       if (filters.brand) {
-        filtered = filtered.filter((car) => {
-          const matches = car.brand_name.toLowerCase() === filters.brand.toLowerCase();
-          console.log(`Brand filter: ${car.brand_name} === ${filters.brand} -> ${matches}`);
-          return matches;
-        });
+        filtered = filtered.filter((car) => 
+          car.brand_name.toLowerCase() === filters.brand.toLowerCase()
+        );
       }
 
-      // Filter by year
       if (filters.year) {
-        filtered = filtered.filter((car) => {
-          const carYear = String(car.year);
-          const filterYear = String(filters.year);
-          const matches = carYear === filterYear;
-          console.log(`Year filter: ${carYear} === ${filterYear} -> ${matches}`);
-          return matches;
-        });
+        filtered = filtered.filter((car) => 
+          String(car.year) === String(filters.year)
+        );
       }
 
-      // Filter by maximum price
       if (filters.priceMax) {
         const maxPrice = parseFloat(filters.priceMax);
         if (!isNaN(maxPrice)) {
-          filtered = filtered.filter((car) => {
-            const matches = car.price <= maxPrice;
-            console.log(`Price filter: ${car.price} <= ${maxPrice} -> ${matches}`);
-            return matches;
-          });
+          filtered = filtered.filter((car) => car.price <= maxPrice);
         }
       }
-
-      console.log('Filtered cars:', filtered);
 
       setFilteredCars(filtered);
     };
@@ -126,7 +95,6 @@ const CarFilter: React.FC = () => {
     applyFilters();
   }, [filters, cars]);
 
-  // Handle input changes
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters((prevFilters) => ({
@@ -135,12 +103,10 @@ const CarFilter: React.FC = () => {
     }));
   };
 
-  // Navigate to car details page
   const handleViewDetails = (carId: number) => {
     navigate(`/client/home/car-details/${carId}`);
   };
 
-  // Styles
   const sectionStyle: React.CSSProperties = {
     minHeight: '100vh',
     padding: '120px 5% 80px',
@@ -184,61 +150,6 @@ const CarFilter: React.FC = () => {
     zIndex: 0,
   };
 
-  const filterFormStyle: React.CSSProperties = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '1rem',
-    justifyContent: 'center',
-    marginBottom: '2rem',
-  };
-
-  const selectStyle: React.CSSProperties = {
-    padding: '0.5rem',
-    borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.1)',
-    color: 'white',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    fontSize: '1rem',
-    minWidth: '150px',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    padding: '0.5rem',
-    borderRadius: '8px',
-    background: 'rgba(255, 255, 255, 0.1)',
-    color: 'white',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    fontSize: '1rem',
-    width: '150px',
-  };
-
-  const carGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '1.5rem',
-    marginTop: '2rem',
-  };
-
-  const carCardStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-    cursor: 'pointer',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '9999px',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    background: 'linear-gradient(to right, #ff3366, #4834d4)',
-    color: 'white',
-    transition: 'transform 0.3s ease',
-    width: '100%',
-    textAlign: 'center',
-  };
-
   return (
     <div className="bg-[#0a0a0a] min-h-screen font-sans w-full text-white">
       <GlobalStyles />
@@ -266,35 +177,12 @@ const CarFilter: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* แจ้งเตือนถ้าข้อมูลใน dropdown ไม่ครบ */}
-              {brands.length === 0 && (
-                <p className="text-center text-yellow-400 mb-4">
-                  ไม่พบข้อมูลยี่ห้อรถ กรุณาตรวจสอบฐานข้อมูลหรือ API
-                </p>
-              )}
-              {years.length === 0 && (
-                <p className="text-center text-yellow-400 mb-4">
-                  ไม่พบข้อมูลปีรถ กรุณาตรวจสอบฐานข้อมูลหรือ API
-                </p>
-              )}
-              {brands.length > 0 && brands.length < 4 && (
-                <p className="text-center text-yellow-400 mb-4">
-                  ข้อมูลยี่ห้อรถอาจไม่ครบ ({brands.length}/4 ยี่ห้อ) กรุณาตรวจสอบ API
-                </p>
-              )}
-              {years.length > 0 && years.length < 3 && (
-                <p className="text-center text-yellow-400 mb-4">
-                  ข้อมูลปีรถอาจไม่ครบ ({years.length}/3 ปี) กรุณาตรวจสอบ API
-                </p>
-              )}
-
-              {/* Filter Form */}
-              <div className="filter-form" style={filterFormStyle}>
+              <div className="flex flex-wrap gap-4 justify-center mb-8">
                 <select
                   name="brand"
                   value={filters.brand}
                   onChange={handleFilterChange}
-                  style={selectStyle}
+                  className="p-3 rounded-lg bg-[rgba(255,255,255,0.1)] text-white border border-[rgba(255,255,255,0.2)] min-w-[150px]"
                 >
                   <option value="">All Brands</option>
                   {brands.map((brand) => (
@@ -308,7 +196,7 @@ const CarFilter: React.FC = () => {
                   name="year"
                   value={filters.year}
                   onChange={handleFilterChange}
-                  style={selectStyle}
+                  className="p-3 rounded-lg bg-[rgba(255,255,255,0.1)] text-white border border-[rgba(255,255,255,0.2)] min-w-[150px]"
                 >
                   <option value="">All Years</option>
                   {years.map((year) => (
@@ -324,28 +212,18 @@ const CarFilter: React.FC = () => {
                   value={filters.priceMax}
                   onChange={handleFilterChange}
                   placeholder="Max Price (บาท)"
-                  style={inputStyle}
+                  className="p-3 rounded-lg bg-[rgba(255,255,255,0.1)] text-white border border-[rgba(255,255,255,0.2)] w-[150px]"
                 />
               </div>
 
-              {/* Filtered Cars */}
               {filteredCars.length === 0 ? (
                 <p className="text-center text-gray-400">ไม่พบรถที่ตรงกับตัวเลือกของคุณ</p>
               ) : (
-                <div className="car-grid" style={carGridStyle}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
                   {filteredCars.map((car) => (
                     <div
                       key={car.id}
-                      className="car-card"
-                      style={carCardStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
+                      className="bg-[rgba(255,255,255,0.05)] rounded-xl overflow-hidden hover:scale-105 transition-transform cursor-pointer"
                     >
                       <img
                         src={car.image_url}
@@ -365,14 +243,7 @@ const CarFilter: React.FC = () => {
                         </p>
                         <button
                           onClick={() => handleViewDetails(car.id)}
-                          style={buttonStyle}
-                          className="mt-4"
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
+                          className="w-full mt-4 py-3 bg-gradient-to-r from-[#ff3366] to-[#4834d4] text-white rounded-full hover:scale-105 transition-transform"
                         >
                           View Details
                         </button>
