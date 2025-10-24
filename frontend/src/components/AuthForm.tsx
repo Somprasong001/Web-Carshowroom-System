@@ -18,6 +18,9 @@ const AuthForm: React.FC = () => {
   const { login, isAuthenticated, userRole } = useAuth();
   const navigate = useNavigate();
 
+  // API URL จาก env var (fallback สำหรับ local dev)
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
   useEffect(() => {
     console.log('AuthForm rendered, isLogin:', isLogin, 'showForgotPassword:', showForgotPassword);
     console.log('AuthForm useEffect - Auth state:', { isAuthenticated, userRole });
@@ -75,13 +78,13 @@ const AuthForm: React.FC = () => {
     }
 
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const payload = isLogin
         ? { email: trimmedEmail, password: trimmedPassword }
         : { name: trimmedName, email: trimmedEmail, password: trimmedPassword, role: 'client' };
-      console.log('Sending payload:', payload);
+      console.log('Sending payload to', `${API_URL}${endpoint}:`, payload);
 
-      const response = await axios.post(`http://localhost:5000${endpoint}`, payload, {
+      const response = await axios.post(`${API_URL}${endpoint}`, payload, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -112,7 +115,7 @@ const AuthForm: React.FC = () => {
         const errorMessage = err.response.data.error || err.response.data.message || 'การยืนยันตัวตนล้มเหลว';
         setError(errorMessage);
       } else if (err.request) {
-        setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า backend ทำงานอยู่');
+        setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือ backend');
       } else {
         setError(err.message || 'เกิดข้อผิดพลาดบางอย่าง');
       }
@@ -127,13 +130,35 @@ const AuthForm: React.FC = () => {
     setSuccess(null);
     setLoading(true);
 
+    const trimmedForgotEmail = forgotEmail.trim();
+    if (!trimmedForgotEmail || !validator.isEmail(trimmedForgotEmail)) {
+      setError('กรุณากรอกอีเมลที่ถูกต้อง');
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log(`ส่งอีเมลรีเซ็ตรหัสผ่านไปที่: ${forgotEmail}`);
-      setSuccess('ส่งคำแนะนำการรีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
+      console.log(`Sending forgot password request to ${API_URL}/auth/forgot-password with email:`, trimmedForgotEmail);
+      const response = await axios.post(`${API_URL}/auth/forgot-password`, { email: trimmedForgotEmail }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Forgot password response:', response.data);
+      setSuccess('ส่งคำแนะนำการรีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบกล่องจดหมาย!');
       setForgotEmail('');
       setTimeout(() => setShowForgotPassword(false), 2000);
     } catch (err: any) {
-      setError('ไม่สามารถส่งคำแนะนำการรีเซ็ตได้ กรุณาลองใหม่');
+      console.error('Forgot password error:', err.response || err.message);
+      if (err.response) {
+        const errorMessage = err.response.data.error || err.response.data.message || 'ไม่สามารถส่งคำแนะนำได้';
+        setError(errorMessage);
+      } else if (err.request) {
+        setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } else {
+        setError('เกิดข้อผิดพลาดบางอย่าง');
+      }
     } finally {
       setLoading(false);
     }
