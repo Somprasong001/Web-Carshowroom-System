@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// API URL Configuration - ต้องมี /api ในตัว
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -40,8 +41,9 @@ const ContactUs: React.FC = () => {
         throw new Error('กรุณาล็อกอินก่อนส่งข้อความ');
       }
 
+      // ✅ เปลี่ยนจาก '/api/contacts' เป็น '/contacts' เพราะ baseURL มี /api อยู่แล้ว
       await apiClient.post(
-        '/api/contacts',
+        '/contacts',
         formData,
         {
           headers: { Authorization: `Bearer ${token}` },
