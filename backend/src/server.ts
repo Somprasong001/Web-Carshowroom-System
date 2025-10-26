@@ -14,9 +14,10 @@ dotenv.config();
 
 const app = express();
 
-// ตั้งค่า CORS - รองรับทั้ง Development และ Production
+// ตั้งค่า CORS - รองรับทั้ง Development และ Production (รวม Vercel Preview URLs)
 const corsOptions = {
   origin: function (origin: string | undefined, callback: Function) {
+    // รายการ domains ที่อนุญาต
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
@@ -24,17 +25,40 @@ const corsOptions = {
       'https://web-carshowroom-system.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    
+
     console.log(`[CORS] Request from origin: ${origin || 'undefined'}`);
     
     // อนุญาตให้ request ที่ไม่มี origin (Postman, mobile apps)
-    if (!origin || allowedOrigins.includes(origin)) {
-      console.log(`[CORS] Allowed origin: ${origin || 'undefined'}`);
+    if (!origin) {
+      console.log(`[CORS] Allowed: No origin (Postman/mobile)`);
       callback(null, true);
-    } else {
-      console.warn(`[CORS] Blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+
+    // ตรวจสอบว่า origin ตรงกับรายการที่อนุญาตหรือไม่
+    if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] Allowed origin: ${origin}`);
+      callback(null, true);
+      return;
+    }
+
+    // อนุญาต Vercel preview/deployment URLs (*.vercel.app)
+    if (origin.endsWith('.vercel.app')) {
+      console.log(`[CORS] Allowed Vercel preview: ${origin}`);
+      callback(null, true);
+      return;
+    }
+
+    // อนุญาต Railway preview URLs (*.up.railway.app)
+    if (origin.endsWith('.up.railway.app')) {
+      console.log(`[CORS] Allowed Railway preview: ${origin}`);
+      callback(null, true);
+      return;
+    }
+
+    // บล็อก origins อื่นๆ
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
