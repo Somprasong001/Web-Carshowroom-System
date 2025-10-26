@@ -56,7 +56,7 @@ interface ReportData {
   registrationTrends?: { date: string; count: number }[];
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -176,7 +176,6 @@ const Home: React.FC = () => {
   const { logout, userRole, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const navRef = useRef<HTMLUListElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -297,62 +296,6 @@ const Home: React.FC = () => {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const connectWebSocket = () => {
-      try {
-        const ws = new WebSocket('ws://localhost:8080');
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-          console.log('WebSocket connected');
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'notification' && (data.event === 'login' || data.event === 'register')) {
-              setNotifications((prev) => [
-                ...prev,
-                {
-                  id: Date.now(),
-                  message: data.message,
-                  timestamp: new Date().toLocaleString(),
-                },
-              ]);
-            }
-          } catch (err) {
-            console.error('Error parsing WebSocket message:', err);
-          }
-        };
-
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-        };
-
-        ws.onclose = () => {
-          console.log('WebSocket disconnected');
-          setTimeout(() => {
-            if (isAuthenticated) {
-              connectWebSocket();
-            }
-          }, 5000);
-        };
-      } catch (error) {
-        console.error('Failed to create WebSocket connection:', error);
-      }
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [isAuthenticated]);
-
-  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
@@ -372,9 +315,6 @@ const Home: React.FC = () => {
   };
 
   const handleLogout = () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
     logout();
     navigate('/');
   };
@@ -451,19 +391,56 @@ const Home: React.FC = () => {
   };
 
   const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      alert('Please fill in all required fields');
+    // Validation
+    if (!newUser.name.trim()) {
+      alert('Please enter a name');
+      return;
+    }
+
+    if (!newUser.email.trim()) {
+      alert('Please enter an email');
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newUser.email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    if (!newUser.password) {
+      alert('Please enter a password');
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      alert('Password must be at least 6 characters long');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      const response = await apiClient.post('/users', newUser, {
+      
+      // Prepare user data with proper formatting
+      const userData = {
+        name: newUser.name.trim(),
+        email: newUser.email.trim().toLowerCase(),
+        password: newUser.password,
+        role: newUser.role
+      };
+
+      console.log('Adding user with data:', { ...userData, password: '***' });
+
+      const response = await apiClient.post('/users', userData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       
+      console.log('User added successfully:', response.data);
+      
+      // Refresh user list
       const refreshResponse = await apiClient.get('/users', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -471,12 +448,31 @@ const Home: React.FC = () => {
       });
       setUsers(refreshResponse.data);
       
+      // Close modal and reset form
       setShowAddUserModal(false);
       setNewUser({ name: '', email: '', password: '', role: 'client' });
       alert('User added successfully');
     } catch (error: any) {
       console.error('Error adding user:', error);
-      alert('Failed to add user: ' + (error.response?.data?.error || error.message));
+      console.error('Error response:', error.response?.data);
+      
+      // Handle specific error messages
+      let errorMessage = 'Failed to add user';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Check for duplicate email error
+      if (errorMessage.includes('Duplicate') || errorMessage.includes('already exists')) {
+        errorMessage = 'This email is already registered. Please use a different email.';
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -725,34 +721,42 @@ const Home: React.FC = () => {
             <h2 className="text-lg font-semibold text-white mb-4">Add New User</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Name</label>
+                <label className="block text-sm font-medium text-white mb-2">Name *</label>
                 <input
                   type="text"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   className="w-full rounded-lg bg-slate-900/50 p-3 text-white border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter full name"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Email</label>
+                <label className="block text-sm font-medium text-white mb-2">Email *</label>
                 <input
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="w-full rounded-lg bg-slate-900/50 p-3 text-white border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter email address"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Password</label>
+                <label className="block text-sm font-medium text-white mb-2">Password *</label>
                 <input
                   type="password"
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   className="w-full rounded-lg bg-slate-900/50 p-3 text-white border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter password (min 6 characters)"
+                  required
+                  minLength={6}
                 />
+                <p className="text-xs text-slate-400 mt-1">Password must be at least 6 characters</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Role</label>
+                <label className="block text-sm font-medium text-white mb-2">Role *</label>
                 <select
                   value={newUser.role}
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -763,16 +767,19 @@ const Home: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end mt-6">
               <button
-                onClick={() => setShowAddUserModal(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg mr-2"
+                onClick={() => {
+                  setShowAddUserModal(false);
+                  setNewUser({ name: '', email: '', password: '', role: 'client' });
+                }}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg mr-2 hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddUser}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
+                className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
               >
                 Add User
               </button>
@@ -887,15 +894,15 @@ const Home: React.FC = () => {
           </p>
           <div className="mt-10">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">User List</h2>
+              <h2 className="text-lg font-semibold text-white">User List ({users.length} total)</h2>
               <button
                 onClick={() => setShowAddUserModal(true)}
-                className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600"
+                className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600"
               >
-                Add User
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
+                Add User
               </button>
             </div>
             <div className="overflow-x-auto rounded-lg shadow-2xl">
@@ -914,25 +921,32 @@ const Home: React.FC = () => {
                     <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-900/50">
                       <td className="px-6 py-4">{user.name}</td>
                       <td className="px-6 py-4">{user.email}</td>
-                      <td className="px-6 py-4">{user.role}</td>
                       <td className="px-6 py-4">
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          user.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' :
+                          user.role === 'admin' ? 'bg-purple-500/10 text-purple-500' :
+                          'bg-blue-500/10 text-blue-500'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          user.status === 'Active' || user.status === '1' ? 'bg-emerald-500/10 text-emerald-500' :
                           'bg-gray-500/10 text-gray-500'
                         }`}>
-                          {user.status}
+                          {user.status === '1' ? 'Active' : user.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 flex gap-2">
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="text-indigo-500 hover:text-indigo-400"
+                          className="text-indigo-500 hover:text-indigo-400 transition-colors"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-500 hover:text-red-400"
+                          className="text-red-500 hover:text-red-400 transition-colors"
                         >
                           Delete
                         </button>
@@ -957,15 +971,15 @@ const Home: React.FC = () => {
           </p>
           <div className="mt-10">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">Message List</h2>
+              <h2 className="text-lg font-semibold text-white">Message List ({contactMessages.length} total)</h2>
               <button
                 onClick={() => fetchContactMessages()}
-                className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600"
+                className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600"
               >
-                Refresh
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9H0m0 9.414V14h4.582a8.001 8.001 0 0015.356-2H24" />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
+                Refresh
               </button>
             </div>
             <div className="overflow-x-auto rounded-lg shadow-2xl">
@@ -985,19 +999,19 @@ const Home: React.FC = () => {
                     <tr key={msg.id} className="border-b border-slate-800 hover:bg-slate-900/50">
                       <td className="px-6 py-4">{msg.name}</td>
                       <td className="px-6 py-4">{msg.email}</td>
-                      <td className="px-6 py-4">{msg.message}</td>
+                      <td className="px-6 py-4 max-w-xs truncate">{msg.message}</td>
                       <td className="px-6 py-4">{msg.file_name || 'No file'}</td>
                       <td className="px-6 py-4">{new Date(msg.created_at).toLocaleString()}</td>
                       <td className="px-6 py-4 flex gap-2">
                         <button
                           onClick={() => handleViewContact(msg)}
-                          className="text-indigo-500 hover:text-indigo-400"
+                          className="text-indigo-500 hover:text-indigo-400 transition-colors"
                         >
                           View
                         </button>
                         <button
                           onClick={() => handleDeleteContact(msg.id)}
-                          className="text-red-500 hover:text-red-400"
+                          className="text-red-500 hover:text-red-400 transition-colors"
                         >
                           Delete
                         </button>
