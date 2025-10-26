@@ -352,4 +352,4 @@ const CarDetails: React.FC = () => {
   );
 };
 
-export default CarDetails;
+export default CarDetails; 

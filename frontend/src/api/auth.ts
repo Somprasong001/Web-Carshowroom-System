@@ -429,4 +429,4 @@ export default {
   // Reports
   getUserActivity,
   getRegistrationTrends,
-};
+}; 
