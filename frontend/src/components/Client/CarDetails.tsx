@@ -6,6 +6,9 @@ import BackToTop from '../Common/BackToTop';
 import GlobalStyles from '../Common/GlobalStyles';
 import { useAuth } from '../../context/AuthContext';
 
+// API URL Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 // Define the Car interface (same as in OurCars)
 interface Car {
   id: number;
@@ -38,7 +41,7 @@ const CarDetails: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/cars/${id}`);
+        const response = await axios.get(`${API_URL}/cars/${id}`);
         setCar(response.data);
       } catch (error: any) {
         const errorMessage = error.response
@@ -79,7 +82,7 @@ const CarDetails: React.FC = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/bookings',
+        `${API_URL}/bookings`,
         {
           carId: id,
           bookingDate,

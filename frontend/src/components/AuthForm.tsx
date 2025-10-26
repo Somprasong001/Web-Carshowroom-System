@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import validator from 'validator';
 
+// API URL Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const AuthForm: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -17,9 +20,6 @@ const AuthForm: React.FC = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const { login, isAuthenticated, userRole } = useAuth();
   const navigate = useNavigate();
-
-  // API URL จาก env var (fallback สำหรับ local dev)
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     console.log('AuthForm rendered, isLogin:', isLogin, 'showForgotPassword:', showForgotPassword);
