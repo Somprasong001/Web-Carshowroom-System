@@ -21,9 +21,7 @@ const AuthFormAdmin: React.FC = () => {
   const { login: authLogin } = useAuth();
 
   useEffect(() => {
-    console.log('useEffect triggered:', { isLoading, success });
     if (!isLoading && success) {
-      console.log('Navigating to /admin/home');
       setTimeout(() => navigate('/admin/home', { replace: true }), 1000);
     }
   }, [isLoading, success, navigate]);
@@ -49,10 +47,14 @@ const AuthFormAdmin: React.FC = () => {
     setSuccess(null);
     setIsLoading(true);
 
-    console.log('Form submitted:', { name, email, password });
+    // Validation
+    if (!email || !password) {
+      setError('กรุณากรอกอีเมลและรหัสผ่าน');
+      setIsLoading(false);
+      return;
+    }
 
     if (password.length < 6) {
-      console.log('Password validation failed:', password.length);
       setError('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
       setIsLoading(false);
       return;
@@ -60,9 +62,19 @@ const AuthFormAdmin: React.FC = () => {
 
     try {
       const endpoint = isLogin ? `${API_URL}/auth/login` : `${API_URL}/auth/register`;
+      
+      // Prepare request body
       const body = isLogin 
-        ? { email, password }
-        : { email, password, role: 'admin' };
+        ? { email: email.trim(), password }
+        : { 
+            name: name.trim() || email.split('@')[0],
+            email: email.trim(), 
+            password,
+            role: 'admin'
+          };
+
+      console.log('Sending request to:', endpoint);
+      console.log('Request body:', { ...body, password: '***' });
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -72,43 +84,51 @@ const AuthFormAdmin: React.FC = () => {
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Request failed');
-      }
-
       const data = await response.json();
-      console.log('API response:', data);
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
 
-      if (data.user.role !== 'admin') {
-        throw new Error('การเข้าถึงถูกปฏิเสธ ต้องมีบทบาทเป็นผู้ดูแล');
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'เกิดข้อผิดพลาด');
       }
 
-      const successMessage = `${
-        isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'
-      }สำเร็จ! กำลังเปลี่ยนเส้นทาง...`;
+      // Check if user is admin
+      if (data.user && data.user.role !== 'admin') {
+        throw new Error('การเข้าถึงถูกปฏิเสธ ต้องมีบทบาทเป็นผู้ดูแลระบบ');
+      }
+
+      const successMessage = `${isLogin ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}สำเร็จ! กำลังเปลี่ยนเส้นทาง...`;
       setSuccess(successMessage);
-      authLogin(data.token, 'admin', { name: data.user.name || data.user.email, email: data.user.email });
-      console.log('Auth login called:', {
-        token: data.token,
-        role: 'admin',
-        user: { name: data.user.name || data.user.email, email: data.user.email },
-      });
+      
+      // Login to auth context
+      authLogin(
+        data.token, 
+        'admin', 
+        { 
+          name: data.user.name || data.user.email.split('@')[0], 
+          email: data.user.email 
+        }
+      );
+      
       resetForm();
     } catch (err: any) {
-      const errorMessage = err.message || (isLogin ? 'การเข้าสู่ระบบล้มเหลว' : 'การสมัครสมาชิกไม่สำเร็จ');
-      console.log('Error occurred:', errorMessage);
-      setError(errorMessage);
-      if (!isLogin && errorMessage.includes('มีผู้ใช้งานแล้ว')) {
-        setError('อีเมลนี้มีผู้ใช้งานแล้ว กรุณาใช้ที่อยู่อีเมลอื่นหรือเข้าสู่ระบบ');
+      console.error('Error:', err);
+      let errorMessage = err.message || (isLogin ? 'การเข้าสู่ระบบล้มเหลว' : 'การสมัครสมาชิกไม่สำเร็จ');
+      
+      // Handle specific errors
+      if (errorMessage.includes('already exists') || errorMessage.includes('มีผู้ใช้งานแล้ว')) {
+        errorMessage = 'อีเมลนี้มีผู้ใช้งานแล้ว กรุณาเข้าสู่ระบบ';
         setTimeout(() => {
           setIsLogin(true);
           resetForm();
         }, 2000);
+      } else if (errorMessage.includes('Invalid') || errorMessage.includes('ไม่ถูกต้อง')) {
+        errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
-      console.log('isLoading set to false, success:', success, 'error:', error);
     }
   };
 
@@ -134,7 +154,7 @@ const AuthFormAdmin: React.FC = () => {
     <div
       className="bg-[#0a0a0a] h-screen w-screen flex items-center justify-center px-4 bg-cover bg-center overflow-hidden"
       style={{
-        backgroundImage: `url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`,
+        backgroundImage: `url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=2070&auto=format&fit=crop')`,
         backgroundBlendMode: 'overlay',
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
       }}
@@ -157,11 +177,13 @@ const AuthFormAdmin: React.FC = () => {
               : 'เข้าสู่ระบบสำหรับผู้ดูแล'
             : 'สมัครสมาชิกสำหรับผู้ดูแล'}
         </motion.h2>
+        
         {error && (
           <p className="text-red-500 text-center bg-[rgba(255,0,0,0.1)] p-2 rounded-lg mb-4 text-sm sm:text-base">
             {error}
           </p>
         )}
+        
         {success && (
           <p className="text-green-500 text-center bg-[rgba(0,255,0,0.1)] p-2 rounded-lg mb-4 text-sm sm:text-base">
             {success}
@@ -192,6 +214,7 @@ const AuthFormAdmin: React.FC = () => {
                 placeholder="กรอกรหัสผ่านของคุณ (อย่างน้อย 6 ตัวอักษร)"
                 required
                 disabled={isLoading}
+                minLength={6}
               />
             </div>
             <button
@@ -226,6 +249,17 @@ const AuthFormAdmin: React.FC = () => {
         {!isLogin && !showForgotPassword && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="block text-gray-300 mb-1 text-sm sm:text-base">ชื่อ (ไม่บังคับ)</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 rounded-lg bg-[#1f2029] text-white border-none focus:outline-none focus:ring-2 focus:ring-[#ff3366] text-sm sm:text-base"
+                placeholder="กรอกชื่อของคุณ"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
               <label className="block text-gray-300 mb-1 text-sm sm:text-base">อีเมล</label>
               <input
                 type="email"
@@ -247,6 +281,7 @@ const AuthFormAdmin: React.FC = () => {
                 placeholder="กรอกรหัสผ่านของคุณ (อย่างน้อย 6 ตัวอักษร)"
                 required
                 disabled={isLoading}
+                minLength={6}
               />
             </div>
             <button
@@ -318,4 +353,4 @@ const AuthFormAdmin: React.FC = () => {
   );
 };
 
-export default AuthFormAdmin; 
+export default AuthFormAdmin;

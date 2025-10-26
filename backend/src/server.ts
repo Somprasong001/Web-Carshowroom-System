@@ -20,16 +20,14 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
-      'https://web-carshowroom-frontend.vercel.app',  // เก่า (ถ้ายังใช้)
-      'https://web-carshowroom-system.vercel.app',   // Vercel domain จริงจาก project
-      'https://web-carshowroom-system-production.up.railway.app',  // Backend self (ถ้าต้องการ)
-      process.env.FRONTEND_URL,  // Dynamic URL from environment
-      '*'  // ชั่วคราวสำหรับ test (ลบใน production เพื่อ security)
-    ].filter(Boolean); // ลบค่า undefined/null ออก
+      'https://web-carshowroom-frontend.vercel.app',
+      'https://web-carshowroom-system.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
     
-    console.log(`[CORS] Request from origin: ${origin || 'undefined (e.g., Postman/mobile)'}`);
+    console.log(`[CORS] Request from origin: ${origin || 'undefined'}`);
     
-    // อนุญาตให้ request ที่ไม่มี origin (เช่น Postman, mobile apps, same-origin)
+    // อนุญาตให้ request ที่ไม่มี origin (Postman, mobile apps)
     if (!origin || allowedOrigins.includes(origin)) {
       console.log(`[CORS] Allowed origin: ${origin || 'undefined'}`);
       callback(null, true);
@@ -42,12 +40,10 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
-
-// Handle preflight requests
 app.options('*', cors(corsOptions));
 
 // Middleware สำหรับ parsing JSON และ URL-encoded data
@@ -70,7 +66,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // จำกัดขนาดไฟล์ 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png|pdf/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -84,7 +80,6 @@ const upload = multer({
   },
 });
 
-// Middleware สำหรับตรวจสอบข้อผิดพลาดจากการอัปโหลดไฟล์
 const checkFileError = (req: Request, res: Response, next: NextFunction) => {
   if (req.body.fileError) {
     res.status(400).json({ message: req.body.fileError });
@@ -93,7 +88,7 @@ const checkFileError = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Logging middleware (สำหรับ debug)
+// Logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -139,8 +134,7 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({ 
     error: 'Not Found',
     message: `Cannot ${req.method} ${req.path}`,
-    path: req.path,
-    suggestion: 'Check API documentation for available endpoints'
+    path: req.path
   });
 });
 
@@ -180,7 +174,6 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// Dynamic PORT สำหรับ Railway (fallback 5000 ถ้าไม่ตั้ง vars)
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
