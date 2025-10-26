@@ -6,6 +6,9 @@ import Navbar from '../Common/Navbar';
 import BackToTop from '../Common/BackToTop';
 import GlobalStyles from '../Common/GlobalStyles';
 
+// API URL Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 interface Booking {
   id: number;
   user_id: number;
@@ -33,7 +36,7 @@ const MyBookings: React.FC = () => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/bookings/my-bookings', {
+      const response = await axios.get(`${API_URL}/bookings/my-bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -95,7 +98,7 @@ const MyBookings: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.delete(`http://localhost:5000/api/bookings/${bookingId}`, {
+      const response = await axios.delete(`${API_URL}/bookings/${bookingId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -228,11 +231,7 @@ const MyBookings: React.FC = () => {
             <div className="text-red-500 text-center bg-[rgba(255,0,0,0.1)] p-6 rounded-lg max-w-lg mx-auto">
               <p className="text-lg font-semibold">{error}</p>
               <p className="text-sm mt-2 text-gray-300">
-                Please ensure you are logged in and the backend server is running at{' '}
-                <a href="http://localhost:5000" className="underline hover:text-red-400">
-                  http://localhost:5000
-                </a>
-                .
+                Please ensure you are logged in and the backend server is running.
               </p>
             </div>
           ) : bookings.length === 0 ? (

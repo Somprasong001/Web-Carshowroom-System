@@ -6,6 +6,9 @@ import Navbar from '../Common/Navbar';
 import BackToTop from '../Common/BackToTop';
 import GlobalStyles from '../Common/GlobalStyles';
 
+// API URL Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 // กำหนด Type สำหรับข้อมูลรถยนต์
 interface Car {
   id: number;
@@ -37,7 +40,7 @@ const OurCars: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get('http://localhost:5000/api/cars');
+        const response = await axios.get(`${API_URL}/cars`);
         setCars(response.data);
       } catch (error: any) {
         const errorMessage = error.response
@@ -78,7 +81,7 @@ const OurCars: React.FC = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/bookings',
+        `${API_URL}/bookings`,
         {
           carId,
           bookingDate,

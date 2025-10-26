@@ -6,6 +6,9 @@ import GlobalStyles from '../Common/GlobalStyles';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+// API URL Configuration
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 interface Review {
   id: number;
   user_id: number;
@@ -43,8 +46,8 @@ const Reviews: React.FC = () => {
       setError(null);
       try {
         const [reviewsResponse, carsResponse] = await Promise.all([
-          axios.get('http://localhost:5000/api/reviews'),
-          axios.get('http://localhost:5000/api/cars'),
+          axios.get(`${API_URL}/reviews`),
+          axios.get(`${API_URL}/cars`),
         ]);
 
         const reviewsData = reviewsResponse.data;
@@ -125,7 +128,7 @@ const Reviews: React.FC = () => {
       const token = localStorage.getItem('token');
       const carId = parseInt(newReview.car_id); // แปลงเป็นตัวเลข
       const response = await axios.post(
-        'http://localhost:5000/api/reviews',
+        `${API_URL}/reviews`,
         {
           car_id: carId,
           rating: newReview.rating,
@@ -163,7 +166,7 @@ const Reviews: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.put(
-        `http://localhost:5000/api/reviews/${review.id}`,
+        `${API_URL}/reviews/${review.id}`,
         {
           rating: review.rating,
           comment: review.comment,
@@ -199,7 +202,7 @@ const Reviews: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/reviews/${reviewId}`, {
+      await axios.delete(`${API_URL}/reviews/${reviewId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
