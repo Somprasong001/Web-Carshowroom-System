@@ -176,123 +176,227 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const navRef = useRef<HTMLUListElement>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+  // ✅ แทนที่ useEffect ทั้ง 4 ตัวใน Home.tsx
+
+// 1️⃣ Fetch Dashboard Data (บรรทัดประมาณ 165-205)
+useEffect(() => {
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!isAuthenticated) {
+        console.log('❌ User not authenticated');
+        throw new Error('User not authenticated');
+      }
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('❌ No token found');
+        throw new Error('No authentication token found');
+      }
+
+      console.log('🔄 Fetching dashboard data...');
+      const response = await apiClient.get('/auth/dashboard', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('✅ Dashboard response:', response.data);
+
+      // ✅ Validate and set dashboard data with proper defaults
+      const dashData = {
+        registerData: Array.isArray(response.data.registerData) ? response.data.registerData : [],
+        loginData: Array.isArray(response.data.loginData) ? response.data.loginData : [],
+        totalRegisters: Number(response.data.totalRegisters) || 0,
+        totalLogins: Number(response.data.totalLogins) || 0,
+      };
+
+      console.log('✅ Processed dashboard data:', dashData);
+      setDashboardData(dashData);
+
+      // ✅ Fetch recent activity with separate try-catch
       try {
-        setLoading(true);
-        setError(null);
-
-        if (!isAuthenticated) {
-          throw new Error('User not authenticated');
-        }
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await apiClient.get('/auth/dashboard', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setDashboardData(response.data);
-
+        console.log('🔄 Fetching recent activity...');
         const recentActivityResponse = await apiClient.get('/auth/recent-activity', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const activities = recentActivityResponse.data.map((activity: any) => ({
-          message: activity.message,
-          timestamp: new Date(activity.timestamp).toLocaleString(),
-        }));
-        setRecentActivities(activities);
-      } catch (error: any) {
-        console.error('Error fetching dashboard data:', error);
-        const errorMessage = error.response?.data?.error || 'Failed to load dashboard data';
-        setError(errorMessage);
-        
-        if (error.response?.status === 401) {
-          logout();
-          navigate('/admin/login');
+
+        console.log('✅ Recent activity response:', recentActivityResponse.data);
+
+        if (Array.isArray(recentActivityResponse.data)) {
+          const activities = recentActivityResponse.data.map((activity: any) => ({
+            message: activity.message || activity.action || 'No message',
+            timestamp: activity.timestamp 
+              ? new Date(activity.timestamp).toLocaleString()
+              : activity.created_at
+              ? new Date(activity.created_at).toLocaleString()
+              : 'No date',
+          }));
+          setRecentActivities(activities);
+          console.log('✅ Recent activities set:', activities);
+        } else {
+          console.warn('⚠️ Recent activity is not an array');
+          setRecentActivities([]);
         }
-      } finally {
-        setLoading(false);
+      } catch (activityError: any) {
+        console.error('❌ Error fetching recent activity:', activityError);
+        setRecentActivities([]);
       }
-    };
-    fetchDashboardData();
-  }, [isAuthenticated, logout, navigate]);
+
+    } catch (error: any) {
+      console.error('❌ Error fetching dashboard data:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to load dashboard data';
+      setError(errorMessage);
+      
+      // ✅ Set safe default values on error
+      setDashboardData({
+        registerData: [],
+        loginData: [],
+        totalRegisters: 0,
+        totalLogins: 0,
+      });
+      setRecentActivities([]);
+      
+      if (error.response?.status === 401) {
+        console.log('❌ Unauthorized, logging out...');
+        logout();
+        navigate('/admin/login');
+      }
+    } finally {
+      setLoading(false);
+      console.log('✅ Dashboard data fetch complete');
+    }
+  };
+  
+  fetchDashboardData();
+}, [isAuthenticated, logout, navigate]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('⚠️ No token for users fetch');
+        return;
+      }
 
-        const response = await apiClient.get('/users', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      console.log('🔄 Fetching users...');
+      const response = await apiClient.get('/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('✅ Users response:', response.data);
+
+      // ✅ Validate array
+      if (Array.isArray(response.data)) {
         setUsers(response.data);
-      } catch (error: any) {
-        console.error('Error fetching users:', error);
+        console.log(`✅ Set ${response.data.length} users`);
+      } else {
+        console.warn('⚠️ Users response is not an array:', response.data);
+        setUsers([]);
       }
-    };
-    
-    if (isAuthenticated) {
-      fetchUsers();
+    } catch (error: any) {
+      console.error('❌ Error fetching users:', error);
+      setUsers([]);
     }
-  }, [isAuthenticated]);
+  };
+  
+  if (isAuthenticated) {
+    fetchUsers();
+  }
+}, [isAuthenticated]);
 
-  useEffect(() => {
-    const fetchContactMessages = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  // 3️⃣ Fetch Contact Messages (บรรทัดประมาณ 227-245)
+useEffect(() => {
+  const fetchContactMessages = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('⚠️ No token for contacts fetch');
+        return;
+      }
 
-        const response = await apiClient.get('/contacts', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      console.log('🔄 Fetching contact messages...');
+      const response = await apiClient.get('/contacts', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('✅ Contacts response:', response.data);
+
+      // ✅ Validate array
+      if (Array.isArray(response.data)) {
         setContactMessages(response.data);
-      } catch (error: any) {
-        console.error('Error fetching contact messages:', error);
+        console.log(`✅ Set ${response.data.length} contact messages`);
+      } else {
+        console.warn('⚠️ Contacts response is not an array:', response.data);
+        setContactMessages([]);
       }
-    };
-    
-    if (isAuthenticated) {
-      fetchContactMessages();
+    } catch (error: any) {
+      console.error('❌ Error fetching contact messages:', error);
+      setContactMessages([]);
     }
-  }, [isAuthenticated]);
+  };
+  
+  if (isAuthenticated) {
+    fetchContactMessages();
+  }
+}, [isAuthenticated]);
 
-  useEffect(() => {
-    const fetchAdminEmail = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  // 4️⃣ Fetch Admin Email (บรรทัดประมาณ 247-265)
+useEffect(() => {
+  const fetchAdminEmail = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('⚠️ No token for admin email fetch');
+        return;
+      }
 
-        const response = await apiClient.get('/users/admin-email', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      console.log('🔄 Fetching admin email...');
+      const response = await apiClient.get('/users/admin-email', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('✅ Admin email response:', response.data);
+
+      // ✅ Handle different response formats
+      if (response.data?.email) {
         setAdminEmail(response.data.email);
-      } catch (error: any) {
-        console.error('Error fetching admin email:', error);
+        console.log('✅ Admin email set:', response.data.email);
+      } else if (response.data?.success && response.data?.email) {
+        setAdminEmail(response.data.email);
+        console.log('✅ Admin email set (with success flag):', response.data.email);
+      } else if (typeof response.data === 'string') {
+        setAdminEmail(response.data);
+        console.log('✅ Admin email set (string):', response.data);
+      } else {
+        console.warn('⚠️ Unexpected admin email response format:', response.data);
+        setAdminEmail('admin@example.com');
       }
-    };
-
-    if (isAuthenticated) {
-      fetchAdminEmail();
+    } catch (error: any) {
+      console.error('❌ Error fetching admin email:', error);
+      setAdminEmail('admin@example.com');
     }
+  };
 
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    document.body.classList.toggle('light', savedTheme === 'light');
-  }, [isAuthenticated]);
+  if (isAuthenticated) {
+    fetchAdminEmail();
+  }
+
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  setTheme(savedTheme);
+  document.body.classList.toggle('light', savedTheme === 'light');
+}, [isAuthenticated]);
 
   useEffect(() => {
     const handleScroll = () => {
