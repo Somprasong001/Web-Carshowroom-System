@@ -158,7 +158,6 @@ const Home: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [activeLink, setActiveLink] = useState<string>('#dashboard');
-  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState<boolean>(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
@@ -310,7 +309,6 @@ const Home: React.FC = () => {
 
   const handleLinkClick = (href: string) => {
     setActiveLink(href);
-    setIsMoreDropdownOpen(false);
     if (isMenuOpen) toggleMenu();
   };
 
@@ -427,7 +425,8 @@ const Home: React.FC = () => {
         name: newUser.name.trim(),
         email: newUser.email.trim().toLowerCase(),
         password: newUser.password,
-        role: newUser.role
+        role: newUser.role,
+        status: 1  // 👈 เปลี่ยนจาก 'Active' เป็น 1 (integer สำหรับ active)
       };
 
       console.log('Adding user with data:', { ...userData, password: '***' });
@@ -435,6 +434,7 @@ const Home: React.FC = () => {
       const response = await apiClient.post('/users', userData, {
         headers: {
           Authorization: `Bearer ${token}`,
+         'Content-Type': 'application/json',  // 👈 เพิ่มบรรทัดนี้
         },
       });
       
@@ -451,7 +451,8 @@ const Home: React.FC = () => {
       // Close modal and reset form
       setShowAddUserModal(false);
       setNewUser({ name: '', email: '', password: '', role: 'client' });
-      alert('User added successfully');
+      // alert('User added successfully');
+      alert(`User added successfully!\n\nLogin Credentials:\nEmail: ${userData.email}\nPassword: ${newUser.password}\n\nPlease save these credentials.`);
     } catch (error: any) {
       console.error('Error adding user:', error);
       console.error('Error response:', error.response?.data);
@@ -537,7 +538,7 @@ const Home: React.FC = () => {
 
   const sectionStyle = {
     minHeight: '100vh',
-    padding: '120px 5% 80px',
+    padding: '100px 5% 80px',  // 👈 ลดจาก 120px เป็น 100px เพื่อดึง navbar ลงมา
     position: 'relative' as const,
     overflow: 'hidden',
     width: '100%',
@@ -595,68 +596,15 @@ const Home: React.FC = () => {
           <div className="logo text-2xl font-bold" style={logoStyle}>
             Admin Panel
           </div>
-          <button
-            className="mobile-nav-toggle md:hidden bg-transparent border-none cursor-pointer w-10 h-10 relative z-[1001] rounded-full transition-colors hover:bg-[rgba(255,255,255,0.1)]"
-            aria-label="Toggle navigation"
-            onClick={toggleMenu}
-          >
-            <span
-              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-all duration-400"
-              style={{ top: '14px', ...(isMenuOpen && { transform: 'translate(-50%, 5px) rotate(45deg)', width: '24px' }) }}
-            />
-            <span
-              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-opacity duration-400"
-              style={{ top: '19px', ...(isMenuOpen && { opacity: 0 }) }}
-            />
-            <span
-              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-all duration-400"
-              style={{ top: '24px', ...(isMenuOpen && { transform: 'translate(-50%, -5px) rotate(-45deg)', width: '24px' }) }}
-            />
-          </button>
-          <div className="nav-wrapper relative md:flex items-center">
-            <ul
-              ref={navRef}
-              className={`nav-links flex gap-4 list-none ${isMenuOpen ? 'active' : ''} md:flex md:static md:h-auto md:w-auto md:bg-transparent md:shadow-none md:backdrop-filter-none md:p-0 md:gap-4 absolute top-0 right-[-100%] h-screen w-[80%] max-w-[400px] flex-col justify-center items-center gap-8 p-8 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] md:transition-none bg-transparent shadow-[-10px_0_30px_rgba(0,0,0,0.5)] backdrop-blur-md md:overflow-x-auto md:flex-row md:justify-start md:mx-8`}
-            >
+          
+          {/* Desktop Navigation */}
+          <div className="nav-wrapper hidden md:flex items-center">
+            <ul className="nav-links flex gap-4 list-none">
               <li><a href="#dashboard" onClick={() => handleLinkClick('#dashboard')} style={navLinkStyle(activeLink === '#dashboard')}>Dashboard</a></li>
               <li><a href="#users" onClick={() => handleLinkClick('#users')} style={navLinkStyle(activeLink === '#users')}>Users</a></li>
               <li><a href="#contacts" onClick={() => handleLinkClick('#contacts')} style={navLinkStyle(activeLink === '#contacts')}>Contacts</a></li>
-              <li className="relative">
-                <button
-                  onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-                  style={navLinkStyle(activeLink === '#settings' || activeLink === '#reports')}
-                  className="flex items-center gap-1"
-                >
-                  More
-                  <svg className={`h-4 w-4 transition-transform ${isMoreDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isMoreDropdownOpen && (
-                  <ul className="absolute top-full left-0 mt-2 w-48 rounded-lg bg-slate-950 shadow-lg md:bg-transparent md:shadow-none md:backdrop-blur-md md:rounded-none md:w-full md:static md:mt-0">
-                    <li className="md:border-t md:border-slate-800">
-                      <a
-                        href="#settings"
-                        onClick={() => handleLinkClick('#settings')}
-                        style={navLinkStyle(activeLink === '#settings')}
-                        className="block px-4 py-2 md:px-0 md:py-4"
-                      >
-                        Settings
-                      </a>
-                    </li>
-                    <li className="md:border-t md:border-slate-800">
-                      <a
-                        href="#reports"
-                        onClick={() => handleLinkClick('#reports')}
-                        style={navLinkStyle(activeLink === '#reports')}
-                        className="block px-4 py-2 md:px-0 md:py-4"
-                      >
-                        Reports
-                      </a>
-                    </li>
-                  </ul>
-                )}
-              </li>
+              <li><a href="#settings" onClick={() => handleLinkClick('#settings')} style={navLinkStyle(activeLink === '#settings')}>Settings</a></li>
+              <li><a href="#reports" onClick={() => handleLinkClick('#reports')} style={navLinkStyle(activeLink === '#reports')}>Reports</a></li>
               <li>
                 <button
                   onClick={handleLogout}
@@ -668,15 +616,59 @@ const Home: React.FC = () => {
               </li>
             </ul>
           </div>
-        </div>
-      </nav>
 
-      <div
-        className={`overlay fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.5)] opacity-0 invisible transition-all duration-400 ease-linear backdrop-blur-md ${
-          isMenuOpen ? 'opacity-100 visible' : ''
-        }`}
-        onClick={toggleMenu}
-      />
+          {/* Mobile Menu Button */}
+          <button
+            className="mobile-nav-toggle md:hidden bg-transparent border-none cursor-pointer w-10 h-10 relative z-[1001] rounded-full transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+            aria-label="Toggle navigation"
+            onClick={toggleMenu}
+          >
+            <span
+              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-all duration-300"
+              style={{ top: '14px', ...(isMenuOpen && { transform: 'translate(-50%, 5px) rotate(45deg)', width: '24px' }) }}
+            />
+            <span
+              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-opacity duration-300"
+              style={{ top: '19px', ...(isMenuOpen && { opacity: 0 }) }}
+            />
+            <span
+              className="bar absolute left-1/2 transform -translate-x-1/2 w-5 h-[2px] bg-white transition-all duration-300"
+              style={{ top: '24px', ...(isMenuOpen && { transform: 'translate(-50%, -5px) rotate(-45deg)', width: '24px' }) }}
+            />
+          </button>
+        </div>
+
+        {/* Mobile Overlay */}
+        <div
+          className={`overlay fixed top-0 left-0 w-full h-full bg-[rgba(0,0,0,0.7)] transition-opacity duration-300 z-[1000] backdrop-blur-sm ${
+            isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'
+          }`}
+          onClick={toggleMenu}
+        />
+
+        {/* Mobile Sidebar Menu */}
+        <ul
+          ref={navRef}
+          className={`nav-links-mobile fixed top-0 right-0 h-screen w-[85%] max-w-[400px] flex flex-col justify-start items-start gap-6 pt-24 px-8 transition-all duration-300 ease-in-out z-[1020] bg-gradient-to-b from-[rgba(10,10,10,0.98)] via-[rgba(20,20,30,0.98)] to-[rgba(30,20,40,0.98)] backdrop-blur-xl shadow-[-5px_0_30px_rgba(0,0,0,0.5)] border-l border-l-[rgba(255,255,255,0.1)] md:hidden ${
+            isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+          }`}
+        >
+          <li className="w-full"><a href="#dashboard" onClick={() => handleLinkClick('#dashboard')} style={navLinkStyle(activeLink === '#dashboard')} className="block w-full text-left">Dashboard</a></li>
+          <li className="w-full"><a href="#users" onClick={() => handleLinkClick('#users')} style={navLinkStyle(activeLink === '#users')} className="block w-full text-left">Users</a></li>
+          <li className="w-full"><a href="#contacts" onClick={() => handleLinkClick('#contacts')} style={navLinkStyle(activeLink === '#contacts')} className="block w-full text-left">Contacts</a></li>
+          <li className="w-full"><a href="#settings" onClick={() => handleLinkClick('#settings')} style={navLinkStyle(activeLink === '#settings')} className="block w-full text-left">Settings</a></li>
+          <li className="w-full"><a href="#reports" onClick={() => handleLinkClick('#reports')} style={navLinkStyle(activeLink === '#reports')} className="block w-full text-left">Reports</a></li>
+          <li className="w-full">
+            <button
+              onClick={handleLogout}
+              style={navLinkStyle(activeLink === '#logout')}
+              className="logout-button block w-full text-left"
+            >
+              Logout
+            </button>
+          </li>
+        </ul>
+      </nav> 
 
       {notifications.map((notif) => (
         <div
