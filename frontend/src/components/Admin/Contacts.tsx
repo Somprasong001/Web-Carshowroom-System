@@ -66,8 +66,10 @@ const Contacts: React.FC = () => {
 
       const data = await response.json();
       console.log('📦 Raw contacts response:', data);
+      console.log('📦 Response type:', typeof data);
+      console.log('📦 Is Array?', Array.isArray(data));
 
-      // ✅ Handle both response formats
+      // ✅ Handle multiple response formats
       let contactsArray: Contact[] = [];
 
       if (Array.isArray(data)) {
@@ -75,35 +77,59 @@ const Contacts: React.FC = () => {
         contactsArray = data;
         console.log('✅ Response is direct array');
       } else if (data && typeof data === 'object') {
-        // Format 2: Object with contacts property
+        // Format 2: Check all possible properties
         if (Array.isArray(data.contacts)) {
           contactsArray = data.contacts;
           console.log('✅ Response has contacts property (array)');
         } else if (Array.isArray(data.data)) {
           contactsArray = data.data;
           console.log('✅ Response has data property (array)');
+        } else if (Array.isArray(data.results)) {
+          contactsArray = data.results;
+          console.log('✅ Response has results property (array)');
         } else {
-          console.warn('⚠️ Unknown response format:', data);
-          contactsArray = [];
+          // Try to find any array property
+          const arrayProp = Object.keys(data).find(key => Array.isArray(data[key]));
+          if (arrayProp) {
+            contactsArray = data[arrayProp];
+            console.log(`✅ Found array in property: ${arrayProp}`);
+          } else {
+            console.warn('⚠️ Unknown response format:', data);
+            console.warn('⚠️ Available keys:', Object.keys(data));
+            contactsArray = [];
+          }
         }
       } else {
         console.warn('⚠️ Unexpected response type:', typeof data);
         contactsArray = [];
       }
 
-      console.log(`✅ Set ${contactsArray.length} contacts`);
+      // Validate that contactsArray is actually an array
+      if (!Array.isArray(contactsArray)) {
+        console.error('❌ contactsArray is not an array after processing!');
+        console.error('❌ Final value:', contactsArray);
+        contactsArray = [];
+      }
+
+      console.log(`✅ Setting ${contactsArray.length} contacts to state`);
       setContacts(contactsArray);
 
     } catch (err: any) {
       console.error('❌ Error fetching contacts:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        stack: err.stack
+      });
       setError(err.message || 'ไม่สามารถโหลดข้อมูลได้');
-      setContacts([]); // Set empty array on error
+      setContacts([]); // Always set empty array on error
       
       if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+        console.log('❌ Unauthorized, redirecting to login...');
         navigate('/admin/login');
       }
     } finally {
       setLoading(false);
+      console.log('✅ Fetch contacts completed');
     }
   };
 
