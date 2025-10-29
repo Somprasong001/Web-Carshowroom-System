@@ -2,11 +2,38 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import db from '../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import bcrypt from 'bcryptjs'; // 👈 เพิ่ม import bcrypt
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-// Get all users (admin only)
+// ⚠️ CRITICAL: Routes with specific paths MUST come BEFORE dynamic routes
+// 🔑 หลักการ: route ที่มีชื่อเฉพาะเจาะจง ต้องอยู่ก่อน route ที่เป็น parameter
+
+// ========================================
+// 1️⃣ GET /api/users/admin-email (admin only)
+// ✅ ต้องอยู่ก่อน /:userId เสมอ!
+// ========================================
+router.get('/admin-email', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const [admins] = await db.query<RowDataPacket[]>(
+      'SELECT email FROM users WHERE role = ? LIMIT 1',
+      ['admin']
+    );
+    
+    if (admins.length > 0) {
+      res.status(200).json({ success: true, email: admins[0].email });
+    } else {
+      res.status(200).json({ success: true, email: 'admin@example.com' });
+    }
+  } catch (error) {
+    console.error('[GET /api/users/admin-email] Error:', error);
+    res.status(200).json({ success: true, email: 'admin@example.com' });
+  }
+});
+
+// ========================================
+// 2️⃣ GET /api/users (Get all users)
+// ========================================
 router.get('/', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const [users] = await db.query<RowDataPacket[]>(
@@ -27,7 +54,10 @@ router.get('/', authMiddleware, adminMiddleware, async (req: Request, res: Respo
   }
 });
 
-// 👇 เพิ่ม: Get single user by ID (admin only)
+// ========================================
+// 3️⃣ GET /api/users/:userId (Get single user)
+// ✅ ต้องอยู่หลัง /admin-email
+// ========================================
 router.get('/:userId', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -48,22 +78,9 @@ router.get('/:userId', authMiddleware, adminMiddleware, async (req: Request, res
   }
 });
 
-// Get admin email (admin only)
-router.get('/admin-email', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const [admins] = await db.query<RowDataPacket[]>('SELECT email FROM users WHERE role = "admin" LIMIT 1');
-    if (admins.length > 0) {
-      res.status(200).json({ email: admins[0].email });
-    } else {
-      res.status(200).json({ email: 'admin@example.com' });
-    }
-  } catch (error) {
-    console.error('[GET /api/users/admin-email] Error:', error);
-    res.status(200).json({ email: 'admin@example.com' });
-  }
-});
-
-// 👇 ปรับปรุง: Create new user (admin only) - เพิ่มการ hash password
+// ========================================
+// 4️⃣ POST /api/users (Create new user)
+// ========================================
 router.post('/', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, role, status } = req.body;
   
@@ -115,7 +132,9 @@ router.post('/', authMiddleware, adminMiddleware, async (req: Request, res: Resp
   }
 });
 
-// 👇 เพิ่ม: Update user (admin only)
+// ========================================
+// 5️⃣ PUT /api/users/:userId (Update user)
+// ========================================
 router.put('/:userId', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -171,7 +190,9 @@ router.put('/:userId', authMiddleware, adminMiddleware, async (req: Request, res
   }
 });
 
-// Delete user (admin only)
+// ========================================
+// 6️⃣ DELETE /api/users/:id (Delete user)
+// ========================================
 router.delete('/:id', authMiddleware, adminMiddleware, async (req: Request, res: Response): Promise<void> => {
   const userId = parseInt(req.params.id);
   try {
