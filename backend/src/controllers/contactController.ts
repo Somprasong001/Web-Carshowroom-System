@@ -145,7 +145,7 @@ export const sendContact = async (req: AuthenticatedRequest, res: Response, next
   }
 };
 
-// ✅ ดึงข้อความทั้งหมด (Admin only)
+// ✅ ดึงข้อความทั้งหมด (Admin only) - แก้ไขให้ส่ง Array โดยตรง
 export const getContacts = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ error: 'Unauthorized' });
@@ -179,10 +179,10 @@ export const getContacts = async (req: AuthenticatedRequest, res: Response, next
     
     const [rows] = await db.query<(RowDataPacket & Contact)[]>(query, params);
     
-    res.status(200).json({
-      contacts: rows,
-      total: rows.length
-    });
+    console.log(`✅ Fetched ${rows.length} contacts`);
+    
+    // ✅ แก้ไข: ส่ง Array โดยตรง แทนที่จะเป็น Object
+    res.status(200).json(rows);
   } catch (error) {
     console.error('Error in getContacts:', error);
     res.status(500).json({ 
